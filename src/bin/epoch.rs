@@ -1,31 +1,27 @@
 use std::fs::File;
 use std::io::{self, Write};
 use std::io::Read;
-use std::path::{PathBuf};
+use std::path::{Path, PathBuf};
 use epoch_db::db::errors::TransientError;
+use epoch_db::DB;
 use zip::write::SimpleFileOptions;
 use zip::ZipWriter;
 
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // let db = DB::new(Path::new("./databasetest"))?;
+    let db = DB::new(Path::new("./databasetest"))?;
+    drop(db);
     // db.backup_to(Path::new("./backup")).unwrap();
     let path = PathBuf::from("./backup");
-    if !path.is_dir() {
-        Err(TransientError::FolderNotFound { path: path.to_path_buf() })?;
-    }
 
     let options = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Bzip2);
-    println!("here");
 
     
     // WARN: Temporary
     let zip_file = File::create(path.join("backup.zip"))?;
-    println!("here");
 
     let mut zipw = ZipWriter::new(zip_file);
-    println!("here");
-    let paths = PathBuf::from("/databasetest");
+    let paths = PathBuf::from("./databasetest");
 
     for entry in paths.read_dir()? {
         let e = entry?.path();
