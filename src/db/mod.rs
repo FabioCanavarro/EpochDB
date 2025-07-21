@@ -292,7 +292,6 @@ impl DB {
         println!("here");
 
         for entry in self.path.read_dir()? {
-            println!("{}");
             let e = entry?.path();
             if e.is_file() {
                 let file = File::open(&e)?;
