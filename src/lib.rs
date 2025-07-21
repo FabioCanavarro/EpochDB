@@ -46,7 +46,7 @@ pub struct DB {
     /// Signals the ttl_thread to gracefully shutdown, when the DB is dropped
     shutdown: Arc<AtomicBool>,
     /// Path to the database
-    path: PathBuf
+    pub path: PathBuf
 }
 
 /// Contains additional information about a key, such as its access frequency and lifecycle.

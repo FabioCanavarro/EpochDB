@@ -271,55 +271,57 @@ impl DB {
         }
     }
 
-    pub fn backup_to(&self, path: &Path) -> Result<(), Box<dyn Error>> {
+    pub fn flush(&self) -> Result<(), Box<dyn Error>> {
         self.data_tree.flush()?;
         self.meta_tree.flush()?;
         self.ttl_tree.flush()?;
+
+        Ok(())
+    }
+
+    pub fn backup_to(db: DB, path: &Path) -> Result<DB, Box<dyn Error>> {
+        db.flush()?;
+
+        let db_path = db.path.to_path_buf();
+
+        drop(db);
 
         if !path.is_dir() {
             Err(TransientError::FolderNotFound { path: path.to_path_buf() })?;
         }
 
         let options = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Bzip2);
-        println!("here");
 
         
         // WARN: Temporary
         let zip_file = File::create(path.join("backup.zip"))?;
-        println!("here");
 
         let mut zipw = ZipWriter::new(zip_file);
-        println!("here");
 
-        for entry in self.path.read_dir()? {
+        for entry in db_path.read_dir()? {
             let e = entry?.path();
             if e.is_file() {
                 let file = File::open(&e)?;
-                println!("this");
                 let file_name = e.file_name()
                         .ok_or(TransientError::FileNameDoesntExist)?
                         .to_str().ok_or(TransientError::FileNameDoesntExist)?;
 
-                println!("this??");
                 zipw.start_file(
                     file_name,
                     options
                     
                 )?;
-                println!("thisss");
 
                 let mut buffer = Vec::new();
-                println!("threre");
 
                 io::copy(&mut file.take(u64::MAX), &mut buffer)?;
-                println!("thus");
 
                 zipw.write_all(&buffer)?;
-                println!("Boom");
             }
         }
+
         
-        Ok(())
+        Ok(DB::new(&db_path)?)
 
     }
 
