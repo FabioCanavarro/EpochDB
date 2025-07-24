@@ -2,20 +2,31 @@
 //! It includes the `DB` struct and its implementation, which provides the
 //! primary API for interacting with the database.
 
-pub mod errors;
 pub mod backup;
+pub mod errors;
 
+use crate::{DB, Metadata};
 use errors::TransientError;
 use sled::{
     Config,
     transaction::{ConflictableTransactionError, TransactionError, Transactional},
 };
-use zip::{write::{FileOptions, SimpleFileOptions}, ZipWriter};
-use std::{
-    env::current_dir, error::Error, fs::{create_dir, File}, io::{self, Write}, path::{Path, PathBuf}, str::from_utf8, sync::{atomic::AtomicBool, Arc}, thread::{self, JoinHandle}, time::{Duration, SystemTime, UNIX_EPOCH}
-};
 use std::io::Read;
-use crate::{DB, Metadata};
+use std::{
+    env::current_dir,
+    error::Error,
+    fs::{File, create_dir},
+    io::{self, Write},
+    path::{Path, PathBuf},
+    str::from_utf8,
+    sync::{Arc, atomic::AtomicBool},
+    thread::{self, JoinHandle},
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
+use zip::{
+    ZipWriter,
+    write::{FileOptions, SimpleFileOptions},
+};
 
 impl DB {
     /// Creates a new `DB` instance or opens an existing one at the specified path.
@@ -106,7 +117,7 @@ impl DB {
             ttl_tree,
             ttl_thread: Some(thread),
             shutdown,
-            path: path.to_path_buf()
+            path: path.to_path_buf(),
         })
     }
 
@@ -279,8 +290,6 @@ impl DB {
 
         Ok(())
     }
-
-
 
     pub fn load_from(path: &Path) -> Result<DB, Box<dyn Error>> {
         todo!()

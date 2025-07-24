@@ -1,13 +1,11 @@
-use std::path::Path;
 use epoch_db::DB;
-
+use std::path::Path;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let db = DB::new(Path::new("./databasetest"))?;
     DB::backup_to(db, Path::new("./backup")).unwrap();
 
     // What if I drop everything then re open it?
-    
 
-   Ok(())
+    Ok(())
 }
