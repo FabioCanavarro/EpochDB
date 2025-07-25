@@ -294,6 +294,9 @@ impl DB {
     pub fn backup_to(self, path: &Path) -> Result<(), Box<dyn Error>> {
         self.flush()?;
 
+        let db_path = self.path.to_path_buf();
+
+
         if !path.is_dir() {
             Err(TransientError::FolderNotFound {
                 path: path.to_path_buf(),
@@ -308,20 +311,30 @@ impl DB {
 
         let mut zipw = ZipWriter::new(zip_file);
 
-        for (mut iter, entry) in files {
+        for (iter, entry) in files {
             // Starts the Zipping process
 
             zipw.start_file(entry, options)?;
 
             let mut buffer: [u8; 8192] = [0u8; 8192];
 
-            for i in 0..(buffer.len() / 2) {
-                let (key, value) = match iter.next() {
-                    Some(val) => val?,
-                    None => break
-                };
+            let mut index = 0;
 
-                buffer[i] = 
+            for i in iter {
+                let iu = i?;
+
+                let key = &iu.0.to_vec()[..];
+                let value = &iu.1.to_vec()[..];
+                let kl = key.len();
+                let vl = value.len();
+
+                buffer[index..(index + kl)].copy_from_slice(key);
+                index += kl;
+
+                buffer[index..(index + vl)].copy_from_slice(value);
+                index += vl;
+
+
             }
 
 
