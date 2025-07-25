@@ -338,6 +338,8 @@ impl DB {
 
         }
 
+        zipw.finish()?;
+
         Ok(())
     }
 
