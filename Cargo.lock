@@ -249,6 +249,7 @@ name = "epoch-db"
 version = "0.1.5"
 dependencies = [
  "bincode",
+ "chrono",
  "serde",
  "sled",
  "tempfile",

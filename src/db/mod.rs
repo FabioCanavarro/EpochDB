@@ -6,10 +6,10 @@ pub mod backup;
 pub mod errors;
 
 use crate::{DB, Metadata};
+use chrono::Local;
 use errors::TransientError;
 use sled::{
-    Config,
-    transaction::{ConflictableTransactionError, TransactionError, Transactional},
+    transaction::{ConflictableTransactionError, TransactionError, Transactional}, Config, Iter, Tree
 };
 use std::io::Read;
 use std::{
@@ -303,31 +303,30 @@ impl DB {
             })?;
         }
 
+        let files: [(Iter, &str);3] = [(self.data_tree.iter(),"data.bin"),(self.meta_tree.iter(),"meta.bin"),(self.ttl_tree.iter(),"ttl.bin")];
+
         let options = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Bzip2);
 
-        // WARN: Temporary
-        let zip_file = File::create(path.join("backup.zip"))?;
+        let zip_file = File::create(path.join("backup").join(Local::now().to_string()).join(".zip"))?;
 
         let mut zipw = ZipWriter::new(zip_file);
 
         for entry in db_path.read_dir()? {
             let e = entry?.path();
-            if e.is_file() {
-                let file = File::open(&e)?;
-                let file_name = e
-                    .file_name()
-                    .ok_or(TransientError::FileNameDoesntExist)?
-                    .to_str()
-                    .ok_or(TransientError::FileNameDoesntExist)?;
+            let file = File::open(&e)?;
+            let file_name = e
+                .file_name()
+                .ok_or(TransientError::FileNameDoesntExist)?
+                .to_str()
+                .ok_or(TransientError::FileNameDoesntExist)?;
 
-                zipw.start_file(file_name, options)?;
+            zipw.start_file(file_name, options)?;
 
-                let mut buffer = Vec::new();
+            let mut buffer = Vec::new();
 
-                io::copy(&mut file.take(u64::MAX), &mut buffer)?;
+            io::copy(&mut file.take(u64::MAX), &mut buffer)?;
 
-                zipw.write_all(&buffer)?;
-            }
+            zipw.write_all(&buffer)?;
         }
 
         Ok(())
