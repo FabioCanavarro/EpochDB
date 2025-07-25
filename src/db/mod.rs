@@ -300,12 +300,12 @@ impl DB {
             })?;
         }
 
-        let files: [(Iter, &str);3] = [(self.data_tree.iter(),"data.bin"),(self.meta_tree.iter(),"meta.bin"),(self.ttl_tree.iter(),"ttl.bin")];
+        let files: [(Iter, &str);3] = [(self.data_tree.iter(),"data.epoch"),(self.meta_tree.iter(),"meta.epoch"),(self.ttl_tree.iter(),"ttl.epoch")];
 
         let options = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Bzip2);
 
         let zip_file = File::create(path.join(format!(
-            "backup-{}.epoch",
+            "backup-{}.zip",
             Local::now().format("%Y-%m-%d_%H-%M-%S").to_string()
         )))?;
 
@@ -319,10 +319,13 @@ impl DB {
             for i in iter {
                 let iu = i?;
 
-                let key = &iu.0.to_vec()[..];
-                let value = &iu.1.to_vec()[..];
-                let kl = key.len();
-                let vl = value.len();
+                let key = &iu.0;
+                let value = &iu.1;
+
+                // NOTE: A usize is diffrent on diffrent machines
+                // and a usize will never exceed a u64 in lenght lol
+                let kl: u64 = key.len().try_into()?;
+                let vl: u64 = value.len().try_into()?;
 
 
                 zipw.write_all(&kl.to_be_bytes())?;
