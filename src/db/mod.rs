@@ -316,11 +316,6 @@ impl DB {
 
             zipw.start_file(entry, options)?;
 
-            // NOTE: Buffer based copy lol
-            let mut buffer: [u8; 8192] = [0u8; 8192];
-
-            let mut index = 0;
-
             for i in iter {
                 let iu = i?;
 
@@ -328,31 +323,16 @@ impl DB {
                 let value = &iu.1.to_vec()[..];
                 let kl = key.len();
                 let vl = value.len();
-                let kl_byte = kl.to_be_bytes();
-                let vl_byte = vl.to_be_bytes();
-                let kll = kl_byte.len();
-                let vll = vl_byte.len();
-
-                if (index + kl) > 8192 {
-                    index = 0;
-                    zipw.write_all(&buffer)?;
-                }
-
-                buffer[index..(index + kll)].copy_from_slice(&kl_byte);
-                index += kll;
-
-                buffer[index..(index + vll)].copy_from_slice(&vl_byte);
-                index += vll ;
-
-                buffer[index..(index + kl)].copy_from_slice(key);
-                index += kl;
 
 
-                buffer[index..(index + vl)].copy_from_slice(value);
-                index += vl;
+                zipw.write_all(&kl.to_be_bytes())?;
+                zipw.write_all(key)?;
+                zipw.write_all(&vl.to_be_bytes())?;
+                zipw.write_all(value)?;
+
+
             }
 
-            zipw.write_all(&buffer)?;
         }
 
         Ok(())
