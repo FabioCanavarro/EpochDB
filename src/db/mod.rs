@@ -291,11 +291,8 @@ impl DB {
         Ok(())
     }
 
-    pub fn backup_to(self, path: &Path) -> Result<(), Box<dyn Error>> {
+    pub fn backup_to(&self, path: &Path) -> Result<(), Box<dyn Error>> {
         self.flush()?;
-
-        let db_path = self.path.to_path_buf();
-
 
         if !path.is_dir() {
             Err(TransientError::FolderNotFound {
@@ -307,7 +304,10 @@ impl DB {
 
         let options = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Bzip2);
 
-        let zip_file = File::create(path.join("backup").join(Local::now().to_string()).join(".zip"))?;
+        let zip_file = File::create(path.join(format!(
+            "backup-{}.epoch",
+            Local::now().format("%Y-%m-%d_%H-%M-%S").to_string()
+        )))?;
 
         let mut zipw = ZipWriter::new(zip_file);
 
@@ -316,6 +316,7 @@ impl DB {
 
             zipw.start_file(entry, options)?;
 
+            // NOTE: Buffer based copy lol
             let mut buffer: [u8; 8192] = [0u8; 8192];
 
             let mut index = 0;
@@ -327,16 +328,29 @@ impl DB {
                 let value = &iu.1.to_vec()[..];
                 let kl = key.len();
                 let vl = value.len();
+                let kl_byte = kl.to_be_bytes();
+                let vl_byte = vl.to_be_bytes();
+                let kll = kl_byte.len();
+                let vll = vl_byte.len();
+
+                if (index + kl) > 8192 {
+                    index = 0;
+                    zipw.write_all(&buffer)?;
+                }
+
+                buffer[index..(index + kll)].copy_from_slice(&kl_byte);
+                index += kll;
+
+                buffer[index..(index + vll)].copy_from_slice(&vl_byte);
+                index += vll ;
 
                 buffer[index..(index + kl)].copy_from_slice(key);
                 index += kl;
 
+
                 buffer[index..(index + vl)].copy_from_slice(value);
                 index += vl;
-
-
             }
-
 
             zipw.write_all(&buffer)?;
         }
