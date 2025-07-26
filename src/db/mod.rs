@@ -12,11 +12,11 @@ use sled::{
 };
 use std::{
     error::Error,
-    fs::{File},
-    io::{Write},
-    path::{Path},
+    fs::File,
+    io::{Read, Write},
+    path::Path,
     str::from_utf8,
-    sync::{Arc, atomic::AtomicBool},
+    sync::{atomic::AtomicBool, Arc},
     thread::{self, JoinHandle},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
@@ -323,8 +323,6 @@ impl DB {
                 let kl: u64 = key.len().try_into()?;
                 let vl: u64 = value.len().try_into()?;
 
-                println!("{}",kl.to_be_bytes().len());
-
                 zipw.write_all(&kl.to_be_bytes())?;
                 zipw.write_all(key)?;
                 zipw.write_all(&vl.to_be_bytes())?;
@@ -353,8 +351,21 @@ impl DB {
 
         let mut archive = ZipArchive::new(file)?;
 
-        let data = archive.by_name("data.epoch")?;
-        // data.read(buf);
+        let mut data = archive.by_name("data.epoch")?;
+
+        // NOTE: TESTing to see if read exact actually continues or it constantsly read to a certain
+        // number
+        //
+        // NOTE: HOLY SHIT, it works based on my theory
+
+        let mut buf: [u8;8] = [0u8; 8];
+        let mut buf2: [u8; 8] = [0u8; 8];
+        
+        data.read_exact(&mut buf)?;
+        data.read_exact(&mut buf2)?;
+
+        println!("{:#?}", buf);
+        println!("{:#?}", buf2);
         
 
 
