@@ -2,7 +2,6 @@
 //! It includes the `DB` struct and its implementation, which provides the
 //! primary API for interacting with the database.
 
-pub mod backup;
 pub mod errors;
 
 use crate::{DB, Metadata};

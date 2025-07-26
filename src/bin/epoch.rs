@@ -5,5 +5,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let db = DB::new(Path::new("./databasetest"))?;
     // What if I drop everything then re open it?
 
+    db.backup_to(Path::new("./")).unwrap();
+
     Ok(())
 }
