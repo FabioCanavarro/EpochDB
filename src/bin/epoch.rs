@@ -7,7 +7,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     db.set("H", "haha", None)?;
 
-    db.backup_to(Path::new("./")).unwrap();
+    db.backup_to(Path::new("./backup/")).unwrap();
 
     Ok(())
 }
