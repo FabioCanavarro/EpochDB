@@ -1,7 +1,7 @@
 use std::{thread::sleep, time::Duration};
 
-use tempfile::tempdir;
 use epoch_db::DB;
+use tempfile::tempdir;
 
 #[test]
 fn test_ttl() {

@@ -4,21 +4,25 @@
 
 pub mod errors;
 
+use crate::{DB, Metadata};
+use chrono::Local;
 use errors::TransientError;
 use sled::{
-    Config,
-    transaction::{ConflictableTransactionError, TransactionError, Transactional},
+    transaction::{ConflictableTransactionError, TransactionError, Transactional}, Config, Iter
 };
 use std::{
     error::Error,
+    fs::File,
+    io::{Read, Write},
     path::Path,
     str::from_utf8,
-    sync::{Arc, atomic::AtomicBool},
+    sync::{atomic::AtomicBool, Arc},
     thread::{self, JoinHandle},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
-
-use crate::{DB, Metadata};
+use zip::{
+    write::{SimpleFileOptions}, ZipArchive, ZipWriter
+};
 
 impl DB {
     /// Creates a new `DB` instance or opens an existing one at the specified path.
@@ -109,6 +113,7 @@ impl DB {
             ttl_tree,
             ttl_thread: Some(thread),
             shutdown,
+            path: path.to_path_buf(),
         })
     }
 
@@ -272,6 +277,96 @@ impl DB {
             Some(val) => Ok(Some(Metadata::from_u8(&val.to_vec())?)),
             None => Ok(None),
         }
+    }
+
+    pub fn flush(&self) -> Result<(), Box<dyn Error>> {
+        self.data_tree.flush()?;
+        self.meta_tree.flush()?;
+        self.ttl_tree.flush()?;
+
+        Ok(())
+    }
+
+    pub fn backup_to(&self, path: &Path) -> Result<(), Box<dyn Error>> {
+        self.flush()?;
+
+        if !path.is_dir() {
+            Err(TransientError::FolderNotFound {
+                path: path.to_path_buf(),
+            })?;
+        }
+
+        let files: [(Iter, &str);3] = [(self.data_tree.iter(),"data.epoch"),(self.meta_tree.iter(),"meta.epoch"),(self.ttl_tree.iter(),"ttl.epoch")];
+
+        let options = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Bzip2);
+
+        let zip_file = File::create(path.join(format!(
+            "backup-{}.zip",
+            Local::now().format("%Y-%m-%d_%H-%M-%S").to_string()
+        )))?;
+
+        let mut zipw = ZipWriter::new(zip_file);
+
+        for (iter, entry) in files {
+            // Starts the Zipping process
+
+            zipw.start_file(entry, options)?;
+
+            for i in iter {
+                let iu = i?;
+
+                let key = &iu.0;
+                let value = &iu.1;
+
+                // NOTE: A usize is diffrent on diffrent machines
+                // and a usize will never exceed a u64 in lenght lol
+                let kl: u64 = key.len().try_into()?;
+                let vl: u64 = value.len().try_into()?;
+
+                zipw.write_all(&kl.to_be_bytes())?;
+                zipw.write_all(key)?;
+                zipw.write_all(&vl.to_be_bytes())?;
+                zipw.write_all(value)?;
+
+
+            }
+
+        }
+
+        zipw.finish()?;
+
+        Ok(())
+    }
+
+    pub fn load_from(path: &Path, db_path: &Path) -> Result<DB, Box<dyn Error>> {
+        if !path.is_file() {
+            Err(TransientError::FolderNotFound {
+                path: path.to_path_buf(),
+            })?;
+        }
+
+        let db = DB::new(db_path)?;
+
+        let file = File::open(path)?;
+
+        let mut archive = ZipArchive::new(file)?;
+
+        let mut data = archive.by_name("data.epoch")?;
+
+        let mut len: [u8;8] = [0u8; 8];
+        let mut buf = Vec::new();
+        
+        data.read_exact(&mut len)?;
+
+        data.read(buf, len);
+
+        println!("{:#?}", buf);
+        
+
+
+
+
+        Ok(db)
     }
 }
 

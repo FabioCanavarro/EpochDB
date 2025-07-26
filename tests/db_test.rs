@@ -4,8 +4,8 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-use tempfile::tempdir;
 use epoch_db::DB;
+use tempfile::tempdir;
 
 #[test]
 fn test_set() {
