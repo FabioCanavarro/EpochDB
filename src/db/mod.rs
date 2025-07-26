@@ -8,23 +8,20 @@ use crate::{DB, Metadata};
 use chrono::Local;
 use errors::TransientError;
 use sled::{
-    transaction::{ConflictableTransactionError, TransactionError, Transactional}, Config, Iter, Tree
+    transaction::{ConflictableTransactionError, TransactionError, Transactional}, Config, Iter
 };
-use std::io::Read;
 use std::{
-    env::current_dir,
     error::Error,
-    fs::{File, create_dir},
-    io::{self, Write},
-    path::{Path, PathBuf},
+    fs::{File},
+    io::{Write},
+    path::{Path},
     str::from_utf8,
     sync::{Arc, atomic::AtomicBool},
     thread::{self, JoinHandle},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use zip::{
-    ZipWriter,
-    write::{FileOptions, SimpleFileOptions},
+    write::{SimpleFileOptions}, ZipArchive, ZipWriter
 };
 
 impl DB {
@@ -326,6 +323,7 @@ impl DB {
                 let kl: u64 = key.len().try_into()?;
                 let vl: u64 = value.len().try_into()?;
 
+                println!("{}",kl.to_be_bytes().len());
 
                 zipw.write_all(&kl.to_be_bytes())?;
                 zipw.write_all(key)?;
@@ -350,6 +348,15 @@ impl DB {
         }
 
         let db = DB::new(db_path)?;
+
+        let file = File::open(path)?;
+
+        let mut archive = ZipArchive::new(file)?;
+
+        let data = archive.by_name("data.epoch")?;
+        // data.read(buf);
+        
+
 
 
 
