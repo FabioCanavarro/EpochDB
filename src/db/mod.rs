@@ -353,19 +353,14 @@ impl DB {
 
         let mut data = archive.by_name("data.epoch")?;
 
-        // NOTE: TESTing to see if read exact actually continues or it constantsly read to a certain
-        // number
-        //
-        // NOTE: HOLY SHIT, it works based on my theory
-
-        let mut buf: [u8;8] = [0u8; 8];
-        let mut buf2: [u8; 8] = [0u8; 8];
+        let mut len: [u8;8] = [0u8; 8];
+        let mut buf = Vec::new();
         
-        data.read_exact(&mut buf)?;
-        data.read_exact(&mut buf2)?;
+        data.read_exact(&mut len)?;
+
+        data.read(buf, len);
 
         println!("{:#?}", buf);
-        println!("{:#?}", buf2);
         
 
 
