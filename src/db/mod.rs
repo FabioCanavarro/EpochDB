@@ -342,8 +342,18 @@ impl DB {
         Ok(())
     }
 
-    pub fn load_from(path: &Path) -> Result<DB, Box<dyn Error>> {
-        todo!()
+    pub fn load_from(path: &Path, db_path: &Path) -> Result<DB, Box<dyn Error>> {
+        if !path.is_file() {
+            Err(TransientError::FolderNotFound {
+                path: path.to_path_buf(),
+            })?;
+        }
+
+        let db = DB::new(db_path)?;
+
+
+
+        Ok(db)
     }
 }
 
