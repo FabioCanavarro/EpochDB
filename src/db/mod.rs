@@ -13,7 +13,7 @@ use sled::{
 use std::{
     error::Error,
     fs::File,
-    io::{Read, Write},
+    io::{BufRead, ErrorKind, Read, Write},
     path::Path,
     str::from_utf8,
     sync::{atomic::AtomicBool, Arc},
@@ -353,15 +353,25 @@ impl DB {
 
         let mut data = archive.by_name("data.epoch")?;
 
-        let mut len: [u8;8] = [0u8; 8];
-        let mut buf = Vec::new();
-        
-        data.read_exact(&mut len)?;
 
-        data.read(buf, len);
+        loop {
+            let mut len: [u8;8] = [0u8; 8];
 
-        println!("{:#?}", buf);
+            if let Err(e) = data.read_exact(&mut len)  {
+                if let ErrorKind::UnexpectedEof = e.kind() {
+                    break;
+                }
+            }
+
+            let mut buf = vec![0; u64::from_be_bytes(len).try_into()?];
+            data.read_exact(&mut buf)?;
+
+            println!("{:#?}", buf);
+            println!("{:#?}", len);
+
+        }
         
+                
 
 
 
