@@ -13,7 +13,7 @@ use sled::{
 use std::{
     error::Error,
     fs::File,
-    io::{BufRead, ErrorKind, Read, Write},
+    io::{ErrorKind, Read, Write},
     path::Path,
     str::from_utf8,
     sync::{atomic::AtomicBool, Arc},
@@ -274,7 +274,7 @@ impl DB {
         let byte = key.as_bytes();
         let meta = freq_tree.get(byte)?;
         match meta {
-            Some(val) => Ok(Some(Metadata::from_u8(&val.to_vec())?)),
+            Some(val) => Ok(Some(Metadata::from_u8(&val)?)),
             None => Ok(None),
         }
     }
@@ -302,7 +302,7 @@ impl DB {
 
         let zip_file = File::create(path.join(format!(
             "backup-{}.zip",
-            Local::now().format("%Y-%m-%d_%H-%M-%S").to_string()
+            Local::now().format("%Y-%m-%d_%H-%M-%S")
         )))?;
 
         let mut zipw = ZipWriter::new(zip_file);

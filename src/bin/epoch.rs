@@ -11,6 +11,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     db.set("Chronos", "Temporal", None)?;
 
     db.backup_to(Path::new("./backup/")).unwrap();
+    drop(db);
+    let db = DB::load_from(Path::new("./backup/backup-2025-07-27_22-10-48.zip"), Path::new("./databasetest"))?;
 
     Ok(())
 }
