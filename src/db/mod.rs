@@ -144,10 +144,10 @@ impl DB {
             .transaction(|(data, freq, ttl_tree)| {
                 match freq.get(byte)? {
                     Some(m) => {
-                        let mut meta = Metadata::from_u8(&m.to_vec())
+                        let mut meta = Metadata::from_u8(&m)
                             .map_err(|_| ConflictableTransactionError::Abort(()))?;
                         if let Some(t) = meta.ttl {
-                            let _ = ttl_tree.remove([&t.to_be_bytes()[..], &byte[..]].concat());
+                            let _ = ttl_tree.remove([&t.to_be_bytes()[..], byte].concat());
                         }
                         meta.ttl = ttl_sec;
                         freq.insert(
@@ -168,16 +168,13 @@ impl DB {
 
                 data.insert(byte, val.as_bytes())?;
 
-                match ttl_sec {
-                    Some(d) => {
-                        ttl_tree.insert([&d.to_be_bytes()[..], &byte[..]].concat(), byte)?;
-                    }
-                    None => (),
+                if let Some(d) = ttl_sec {
+                    ttl_tree.insert([&d.to_be_bytes()[..], byte].concat(), byte)?;
                 };
 
                 Ok(())
             });
-        let _ = l.map_err(|_| TransientError::SledTransactionError)?;
+        l.map_err(|_| TransientError::SledTransactionError)?;
 
         Ok(())
     }
@@ -193,7 +190,7 @@ impl DB {
         let byte = key.as_bytes();
         let val = data_tree.get(byte)?;
         match val {
-            Some(val) => Ok(Some(from_utf8(&val.to_vec())?.to_string())),
+            Some(val) => Ok(Some(from_utf8(&val)?.to_string())),
             None => Ok(None),
         }
     }
@@ -212,19 +209,13 @@ impl DB {
             let metadata = freq_tree
                 .get(byte)?
                 .ok_or(TransientError::IncretmentError)?;
-            let meta = Metadata::from_u8(&metadata.to_vec())?;
+            let meta = Metadata::from_u8(&metadata)?;
             let s = freq_tree.compare_and_swap(
                 byte,
                 Some(metadata),
                 Some(meta.freq_incretement().to_u8()?),
             );
-            match s {
-                Ok(ss) => match ss {
-                    Ok(_) => break,
-                    Err(_) => (),
-                },
-                Err(_) => (),
-            }
+            if let Ok(ss) = s { if ss.is_ok() { break } }
         }
 
         Ok(())
@@ -246,16 +237,13 @@ impl DB {
                 let meta = freq
                     .get(byte)?
                     .ok_or(ConflictableTransactionError::Abort(()))?;
-                let time = Metadata::from_u8(&meta.to_vec())
+                let time = Metadata::from_u8(&meta)
                     .map_err(|_| ConflictableTransactionError::Abort(()))?
                     .ttl;
                 freq.remove(*byte)?;
 
-                match time {
-                    Some(t) => {
-                        let _ = ttl_tree.remove([&t.to_be_bytes()[..], &byte[..]].concat());
-                    }
-                    None => (),
+                if let Some(t) = time {
+                    let _ = ttl_tree.remove([&t.to_be_bytes()[..], &byte[..]].concat());
                 }
 
                 Ok(())

@@ -11,7 +11,7 @@ use tempfile::tempdir;
 fn test_set() {
     let temp_dir = tempdir().unwrap();
 
-    let db = DB::new(&temp_dir.path()).unwrap();
+    let db = DB::new(temp_dir.path()).unwrap();
 
     db.set("user:1", "Alice", None).unwrap();
 
@@ -22,7 +22,7 @@ fn test_set() {
 fn test_rm() {
     let temp_dir = tempdir().unwrap();
 
-    let db = DB::new(&temp_dir.path()).unwrap();
+    let db = DB::new(temp_dir.path()).unwrap();
 
     db.set("user:1", "Alice", None).unwrap();
 
@@ -37,7 +37,7 @@ fn test_rm() {
 fn test_get_metadata() {
     let temp_dir = tempdir().unwrap();
 
-    let db = DB::new(&temp_dir.path()).unwrap();
+    let db = DB::new(temp_dir.path()).unwrap();
 
     db.set("user:1", "Alice", None).unwrap();
 
@@ -63,7 +63,7 @@ fn test_get_metadata() {
 #[test]
 fn test_concurrent_increment() {
     let temp_dir = tempdir().unwrap();
-    let db = Arc::new(DB::new(&temp_dir.path()).unwrap());
+    let db = Arc::new(DB::new(temp_dir.path()).unwrap());
 
     let key = "concurrent_key";
     let value = "test_value";
@@ -100,7 +100,7 @@ fn test_concurrent_increment() {
 #[test]
 fn test_data_integrity_on_update() {
     let temp_dir = tempdir().unwrap();
-    let db = DB::new(&temp_dir.path()).unwrap();
+    let db = DB::new(temp_dir.path()).unwrap();
 
     let key = "user:integrity";
 
