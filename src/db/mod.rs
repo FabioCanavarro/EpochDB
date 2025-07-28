@@ -284,7 +284,7 @@ impl DB {
             })?;
         }
 
-        let files: [(Iter, &str);3] = [(self.data_tree.iter(),"data.epoch"),(self.meta_tree.iter(),"meta.epoch"),(self.ttl_tree.iter(),"ttl.epoch")];
+        let files: [(Iter, &str);2] = [(self.data_tree.iter(),"data.epoch"),(self.meta_tree.iter(),"meta.epoch")];
 
         let options = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Bzip2);
 
@@ -315,8 +315,6 @@ impl DB {
                 zipw.write_all(key)?;
                 zipw.write_all(&vl.to_be_bytes())?;
                 zipw.write_all(value)?;
-
-
             }
 
         }
@@ -354,8 +352,15 @@ impl DB {
             let mut buf = vec![0; u64::from_be_bytes(len).try_into()?];
             data.read_exact(&mut buf)?;
 
-            println!("{:#?}", buf);
-            println!("{:#?}", len);
+            if let Err(e) = data.read_exact(&mut len)  {
+                if let ErrorKind::UnexpectedEof = e.kind() {
+                    break;
+                }
+            }
+
+            let mut val = vec![0; u64::from_be_bytes(len).try_into()?];
+            data.read_exact(&mut val)?;
+
 
         }
         
