@@ -348,8 +348,6 @@ impl DB {
 
 
         loop {
-
-
             let mut len: [u8;8] = [0u8; 8];
             if let Err(e) = data.read_exact(&mut len)  {
                 if let ErrorKind::UnexpectedEof = e.kind() {
