@@ -101,7 +101,7 @@ impl DB {
                             );
                         l.map_err(|_| TransientError::SledTransactionError)?;
                     } else {
-                        continue;
+                        break;
                     }
                 }
             }
@@ -179,32 +179,7 @@ impl DB {
         Ok(())
     }
 
-    fn full_set(&self, key: &[u8], val: &[u8], meta: Metadata) -> Result<(), Box<dyn Error>> {
-        let data_tree = &self.data_tree;
-        let freq_tree = &self.meta_tree;
-        let ttl_tree = &self.ttl_tree;
-
-        let l: Result<(), TransactionError<()>> = (&**data_tree, &**freq_tree, &**ttl_tree)
-            .transaction(|(data, freq, ttl_tree)| {
-                freq.insert(
-                    key,
-                    meta
-                        .to_u8()
-                        .map_err(|_| ConflictableTransactionError::Abort(()))?,
-                )?;
-
-                data.insert(key, val)?;
-
-                if let Some(d) = meta.ttl {
-                    ttl_tree.insert([&d.to_be_bytes()[..], key].concat(), key)?;
-                };
-
-                Ok(())
-            });
-        l.map_err(|_| TransientError::SledTransactionError)?;
-
-        Ok(())
-    }
+                
 
     /// Retrieves the value for a given key.
     ///
@@ -294,15 +269,6 @@ impl DB {
         }
     }
 
-    fn get_metadata_byte(&self, key: &[u8]) -> Result<Option<Metadata>, Box<dyn Error>> {
-        let freq_tree = &self.meta_tree;
-        let meta = freq_tree.get(key)?;
-        match meta {
-            Some(val) => Ok(Some(Metadata::from_u8(&val)?)),
-            None => Ok(None),
-        }
-    }
-
     pub fn flush(&self) -> Result<(), Box<dyn Error>> {
         self.data_tree.flush()?;
         self.meta_tree.flush()?;
@@ -331,17 +297,19 @@ impl DB {
 
         let mut zipw = ZipWriter::new(zip_file);
 
+        let mut meta_iter = self.meta_tree.iter();
 
         zipw.start_file("data.epoch", options)?;
         for i in self.data_tree.iter() {
+
             let iu = i?;
 
             let key = &iu.0;
             let value = &iu.1;
-            let meta = &self
-                .get_metadata_byte(key)?
-                .ok_or(TransientError::MetadataNotFound)?
-                .to_u8()?[..];
+            let meta = meta_iter
+                .next()
+                .ok_or(TransientError::MetadataNotFound)??
+                .1;
 
             // NOTE: A usize is diffrent on diffrent machines
             // and a usize will never exceed a u64 in lenght lol
@@ -354,7 +322,7 @@ impl DB {
             zipw.write_all(&vl.to_be_bytes())?;
             zipw.write_all(value)?;
             zipw.write_all(&ml.to_be_bytes())?;
-            zipw.write_all(meta)?;
+            zipw.write_all(&meta)?;
             
         }
 
@@ -411,10 +379,17 @@ impl DB {
 
             let meta = Metadata::from_u8(&meta_byte)?;
 
+            db.meta_tree.insert(
+                &key,
+                meta
+                    .to_u8()?
+            )?;
 
-           
+            db.data_tree.insert(&key, val)?;
 
-            db.full_set(&key, &val, meta)?;
+            if let Some(d) = meta.ttl {
+                db.ttl_tree.insert([&d.to_be_bytes()[..], &key].concat(), key)?;
+            };        
         }
 
 
