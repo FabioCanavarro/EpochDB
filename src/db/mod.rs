@@ -348,8 +348,9 @@ impl DB {
 
 
         loop {
-            let mut len: [u8;8] = [0u8; 8];
 
+
+            let mut len: [u8;8] = [0u8; 8];
             if let Err(e) = data.read_exact(&mut len)  {
                 if let ErrorKind::UnexpectedEof = e.kind() {
                     break;
@@ -359,21 +360,12 @@ impl DB {
             let mut key = vec![0; u64::from_be_bytes(len).try_into()?];
             data.read_exact(&mut key)?;
 
-            if let Err(e) = data.read_exact(&mut len)  {
-                if let ErrorKind::UnexpectedEof = e.kind() {
-                    break;
-                }
-            }
-
+            data.read_exact(&mut len)?;
             let mut val = vec![0; u64::from_be_bytes(len).try_into()?];
             data.read_exact(&mut val)?;
 
-            if let Err(e) = data.read_exact(&mut len)  {
-                if let ErrorKind::UnexpectedEof = e.kind() {
-                    break;
-                }
-            }
-
+            
+            data.read_exact(&mut len)?;
             let mut meta_byte = vec![0; u64::from_be_bytes(len).try_into()?];
             data.read_exact(&mut meta_byte)?;
 
