@@ -179,6 +179,34 @@ impl DB {
         Ok(())
     }
 
+    fn full_set(&self, key: &str, val: &str, meta: Metadata) -> Result<(), Box<dyn Error>> {
+        let data_tree = &self.data_tree;
+        let freq_tree = &self.meta_tree;
+        let ttl_tree = &self.ttl_tree;
+        let byte = key.as_bytes();
+
+        let l: Result<(), TransactionError<()>> = (&**data_tree, &**freq_tree, &**ttl_tree)
+            .transaction(|(data, freq, ttl_tree)| {
+                freq.insert(
+                    byte,
+                    meta
+                        .to_u8()
+                        .map_err(|_| ConflictableTransactionError::Abort(()))?,
+                )?;
+
+                data.insert(byte, val.as_bytes())?;
+
+                if let Some(d) = meta.ttl {
+                    ttl_tree.insert([&d.to_be_bytes()[..], byte].concat(), byte)?;
+                };
+
+                Ok(())
+            });
+        l.map_err(|_| TransientError::SledTransactionError)?;
+
+        Ok(())
+    }
+
     /// Retrieves the value for a given key.
     ///
     /// # Errors
@@ -360,8 +388,6 @@ impl DB {
 
             let mut val = vec![0; u64::from_be_bytes(len).try_into()?];
             data.read_exact(&mut val)?;
-
-
         }
         
                 
