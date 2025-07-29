@@ -4,7 +4,7 @@
 
 pub mod errors;
 
-use crate::{DB, Metadata};
+use crate::{metadata, Metadata, DB};
 use chrono::Local;
 use errors::TransientError;
 use sled::{
@@ -179,25 +179,24 @@ impl DB {
         Ok(())
     }
 
-    fn full_set(&self, key: &str, val: &str, meta: Metadata) -> Result<(), Box<dyn Error>> {
+    fn full_set(&self, key: &[u8], val: &[u8], meta: Metadata) -> Result<(), Box<dyn Error>> {
         let data_tree = &self.data_tree;
         let freq_tree = &self.meta_tree;
         let ttl_tree = &self.ttl_tree;
-        let byte = key.as_bytes();
 
         let l: Result<(), TransactionError<()>> = (&**data_tree, &**freq_tree, &**ttl_tree)
             .transaction(|(data, freq, ttl_tree)| {
                 freq.insert(
-                    byte,
+                    key,
                     meta
                         .to_u8()
                         .map_err(|_| ConflictableTransactionError::Abort(()))?,
                 )?;
 
-                data.insert(byte, val.as_bytes())?;
+                data.insert(key, val)?;
 
                 if let Some(d) = meta.ttl {
-                    ttl_tree.insert([&d.to_be_bytes()[..], byte].concat(), byte)?;
+                    ttl_tree.insert([&d.to_be_bytes()[..], key].concat(), key)?;
                 };
 
                 Ok(())
@@ -295,6 +294,15 @@ impl DB {
         }
     }
 
+    fn get_metadata_byte(&self, key: &[u8]) -> Result<Option<Metadata>, Box<dyn Error>> {
+        let freq_tree = &self.meta_tree;
+        let meta = freq_tree.get(key)?;
+        match meta {
+            Some(val) => Ok(Some(Metadata::from_u8(&val)?)),
+            None => Ok(None),
+        }
+    }
+
     pub fn flush(&self) -> Result<(), Box<dyn Error>> {
         self.data_tree.flush()?;
         self.meta_tree.flush()?;
@@ -312,7 +320,7 @@ impl DB {
             })?;
         }
 
-        let files: [(Iter, &str);2] = [(self.data_tree.iter(),"data.epoch"),(self.meta_tree.iter(),"meta.epoch")];
+        
 
         let options = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Bzip2);
 
@@ -323,28 +331,31 @@ impl DB {
 
         let mut zipw = ZipWriter::new(zip_file);
 
-        for (iter, entry) in files {
-            // Starts the Zipping process
 
-            zipw.start_file(entry, options)?;
+        zipw.start_file("data.epoch", options)?;
+        for i in self.data_tree.iter() {
+            let iu = i?;
 
-            for i in iter {
-                let iu = i?;
+            let key = &iu.0;
+            let value = &iu.1;
+            let meta = &self
+                .get_metadata_byte(key)?
+                .ok_or(TransientError::MetadataNotFound)?
+                .to_u8()?[..];
 
-                let key = &iu.0;
-                let value = &iu.1;
+            // NOTE: A usize is diffrent on diffrent machines
+            // and a usize will never exceed a u64 in lenght lol
+            let kl: u64 = key.len().try_into()?;
+            let vl: u64 = value.len().try_into()?;
+            let ml: u64 = meta.len().try_into()?;
 
-                // NOTE: A usize is diffrent on diffrent machines
-                // and a usize will never exceed a u64 in lenght lol
-                let kl: u64 = key.len().try_into()?;
-                let vl: u64 = value.len().try_into()?;
-
-                zipw.write_all(&kl.to_be_bytes())?;
-                zipw.write_all(key)?;
-                zipw.write_all(&vl.to_be_bytes())?;
-                zipw.write_all(value)?;
-            }
-
+            zipw.write_all(&kl.to_be_bytes())?;
+            zipw.write_all(key)?;
+            zipw.write_all(&vl.to_be_bytes())?;
+            zipw.write_all(value)?;
+            zipw.write_all(&ml.to_be_bytes())?;
+            zipw.write_all(meta)?;
+            
         }
 
         zipw.finish()?;
@@ -377,8 +388,8 @@ impl DB {
                 }
             }
 
-            let mut buf = vec![0; u64::from_be_bytes(len).try_into()?];
-            data.read_exact(&mut buf)?;
+            let mut key = vec![0; u64::from_be_bytes(len).try_into()?];
+            data.read_exact(&mut key)?;
 
             if let Err(e) = data.read_exact(&mut len)  {
                 if let ErrorKind::UnexpectedEof = e.kind() {
@@ -388,11 +399,23 @@ impl DB {
 
             let mut val = vec![0; u64::from_be_bytes(len).try_into()?];
             data.read_exact(&mut val)?;
+
+            if let Err(e) = data.read_exact(&mut len)  {
+                if let ErrorKind::UnexpectedEof = e.kind() {
+                    break;
+                }
+            }
+
+            let mut meta_byte = vec![0; u64::from_be_bytes(len).try_into()?];
+            data.read_exact(&mut meta_byte)?;
+
+            let meta = Metadata::from_u8(&meta_byte)?;
+
+
+           
+
+            db.full_set(&key, &val, meta)?;
         }
-        
-                
-
-
 
 
         Ok(db)

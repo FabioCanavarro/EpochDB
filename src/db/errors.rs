@@ -23,6 +23,7 @@ pub enum TransientError {
         path: PathBuf,
     },
     FileNameDoesntExist,
+    MetadataNotFound
 }
 
 impl Display for TransientError {
@@ -40,6 +41,7 @@ impl Display for TransientError {
                 writeln!(f, "Folder is not found at the path: {:#?}", path)
             }
             TransientError::FileNameDoesntExist => writeln!(f, "File name doesnt exist"),
+            TransientError::MetadataNotFound => writeln!(f,"Metadata is not found"),
         }
     }
 }
