@@ -297,7 +297,6 @@ impl DB {
 
         let mut zipw = ZipWriter::new(zip_file);
 
-        let mut meta_iter = self.meta_tree.iter();
 
         zipw.start_file("data.epoch", options)?;
         for i in self.data_tree.iter() {
@@ -306,10 +305,7 @@ impl DB {
 
             let key = &iu.0;
             let value = &iu.1;
-            let meta = meta_iter
-                .next()
-                .ok_or(TransientError::MetadataNotFound)??
-                .1;
+            let meta = self.meta_tree.get(key)?.ok_or(TransientError::MetadataNotFound)?;
 
             // NOTE: A usize is diffrent on diffrent machines
             // and a usize will never exceed a u64 in lenght lol
@@ -331,6 +327,7 @@ impl DB {
         Ok(())
     }
 
+    // WARN: Add a transactional batching algorithm to ensure safety incase of a power outage
     pub fn load_from(path: &Path, db_path: &Path) -> Result<DB, Box<dyn Error>> {
         if !path.is_file() {
             Err(TransientError::FolderNotFound {
