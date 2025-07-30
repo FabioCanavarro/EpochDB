@@ -100,6 +100,8 @@ fn test_backup_get_metadata() {
 #[test]
 fn test_ttl() {
     let temp_dir = tempdir().unwrap();
+    let backup = tempdir().unwrap();
+    let backup_path = backup.path();
 
     let db = DB::new(temp_dir.path()).unwrap();
 
@@ -108,7 +110,26 @@ fn test_ttl() {
 
     assert_eq!("Alice", db.get("user:1").unwrap().unwrap());
 
+
+    db.backup_to(backup_path).unwrap();
+
+    drop(db);
+    
     sleep(Duration::new(6, 0));
+    temp_dir.close().unwrap();
+
+    let temp_dir = tempdir().unwrap();
+
+    let file =
+        backup_path
+            .read_dir()
+            .unwrap()
+            .next()
+            .unwrap()
+            .unwrap();
+
+    let db = DB::load_from(&file.path(), temp_dir.path()).unwrap();
+    sleep(Duration::new(1, 0));
 
     assert_eq!(None, db.get("user:1").unwrap());
 }
