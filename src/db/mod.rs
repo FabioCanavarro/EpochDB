@@ -4,11 +4,11 @@
 
 pub mod errors;
 
-use crate::{DB, Metadata, metadata};
+use crate::{DB, Metadata};
 use chrono::Local;
 use errors::TransientError;
 use sled::{
-    Config, Iter,
+    Config,
     transaction::{ConflictableTransactionError, TransactionError, Transactional},
 };
 use std::{
