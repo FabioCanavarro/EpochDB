@@ -4,11 +4,12 @@
 
 pub mod errors;
 
-use crate::{metadata, Metadata, DB};
+use crate::{DB, Metadata, metadata};
 use chrono::Local;
 use errors::TransientError;
 use sled::{
-    transaction::{ConflictableTransactionError, TransactionError, Transactional}, Config, Iter
+    Config, Iter,
+    transaction::{ConflictableTransactionError, TransactionError, Transactional},
 };
 use std::{
     error::Error,
@@ -16,13 +17,11 @@ use std::{
     io::{ErrorKind, Read, Write},
     path::Path,
     str::from_utf8,
-    sync::{atomic::AtomicBool, Arc},
+    sync::{Arc, atomic::AtomicBool},
     thread::{self, JoinHandle},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
-use zip::{
-    write::{SimpleFileOptions}, ZipArchive, ZipWriter
-};
+use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
 impl DB {
     /// Creates a new `DB` instance or opens an existing one at the specified path.
@@ -179,8 +178,6 @@ impl DB {
         Ok(())
     }
 
-                
-
     /// Retrieves the value for a given key.
     ///
     /// # Errors
@@ -217,7 +214,11 @@ impl DB {
                 Some(metadata),
                 Some(meta.freq_incretement().to_u8()?),
             );
-            if let Ok(ss) = s { if ss.is_ok() { break } }
+            if let Ok(ss) = s {
+                if ss.is_ok() {
+                    break;
+                }
+            }
         }
 
         Ok(())
@@ -286,9 +287,8 @@ impl DB {
             })?;
         }
 
-        
-
-        let options = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Bzip2);
+        let options =
+            SimpleFileOptions::default().compression_method(zip::CompressionMethod::Bzip2);
 
         let zip_file = File::create(path.join(format!(
             "backup-{}.zip",
@@ -297,15 +297,16 @@ impl DB {
 
         let mut zipw = ZipWriter::new(zip_file);
 
-
         zipw.start_file("data.epoch", options)?;
         for i in self.data_tree.iter() {
-
             let iu = i?;
 
             let key = &iu.0;
             let value = &iu.1;
-            let meta = self.meta_tree.get(key)?.ok_or(TransientError::MetadataNotFound)?;
+            let meta = self
+                .meta_tree
+                .get(key)?
+                .ok_or(TransientError::MetadataNotFound)?;
 
             // NOTE: A usize is diffrent on diffrent machines
             // and a usize will never exceed a u64 in lenght lol
@@ -319,7 +320,6 @@ impl DB {
             zipw.write_all(value)?;
             zipw.write_all(&ml.to_be_bytes())?;
             zipw.write_all(&meta)?;
-            
         }
 
         zipw.finish()?;
@@ -343,10 +343,9 @@ impl DB {
 
         let mut data = archive.by_name("data.epoch")?;
 
-
         loop {
-            let mut len: [u8;8] = [0u8; 8];
-            if let Err(e) = data.read_exact(&mut len)  {
+            let mut len: [u8; 8] = [0u8; 8];
+            if let Err(e) = data.read_exact(&mut len) {
                 if let ErrorKind::UnexpectedEof = e.kind() {
                     break;
                 }
@@ -359,26 +358,21 @@ impl DB {
             let mut val = vec![0; u64::from_be_bytes(len).try_into()?];
             data.read_exact(&mut val)?;
 
-            
             data.read_exact(&mut len)?;
             let mut meta_byte = vec![0; u64::from_be_bytes(len).try_into()?];
             data.read_exact(&mut meta_byte)?;
 
             let meta = Metadata::from_u8(&meta_byte)?;
 
-            db.meta_tree.insert(
-                &key,
-                meta
-                    .to_u8()?
-            )?;
+            db.meta_tree.insert(&key, meta.to_u8()?)?;
 
             db.data_tree.insert(&key, val)?;
 
             if let Some(d) = meta.ttl {
-                db.ttl_tree.insert([&d.to_be_bytes()[..], &key].concat(), key)?;
-            };        
+                db.ttl_tree
+                    .insert([&d.to_be_bytes()[..], &key].concat(), key)?;
+            };
         }
-
 
         Ok(db)
     }

@@ -1,4 +1,7 @@
-use std::{thread::sleep, time::{Duration, SystemTime, UNIX_EPOCH}};
+use std::{
+    thread::sleep,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 
 use epoch_db::DB;
 use tempfile::tempdir;
@@ -18,18 +21,12 @@ fn test_backup_get_key() {
     db.backup_to(backup_path).unwrap();
 
     drop(db);
-    
+
     temp_dir.close().unwrap();
 
     let temp_dir = tempdir().unwrap();
 
-    let file =
-        backup_path
-            .read_dir()
-            .unwrap()
-            .next()
-            .unwrap()
-            .unwrap();
+    let file = backup_path.read_dir().unwrap().next().unwrap().unwrap();
 
     let db = DB::load_from(&file.path(), temp_dir.path()).unwrap();
 
@@ -67,18 +64,12 @@ fn test_backup_get_metadata() {
     db.backup_to(backup_path).unwrap();
 
     drop(db);
-    
+
     temp_dir.close().unwrap();
 
     let temp_dir = tempdir().unwrap();
 
-    let file =
-        backup_path
-            .read_dir()
-            .unwrap()
-            .next()
-            .unwrap()
-            .unwrap();
+    let file = backup_path.read_dir().unwrap().next().unwrap().unwrap();
 
     let db = DB::load_from(&file.path(), temp_dir.path()).unwrap();
 
@@ -93,9 +84,7 @@ fn test_backup_get_metadata() {
             .as_secs()
             > meta.created_at
     );
-
 }
-
 
 #[test]
 fn test_ttl() {
@@ -110,23 +99,16 @@ fn test_ttl() {
 
     assert_eq!("Alice", db.get("user:1").unwrap().unwrap());
 
-
     db.backup_to(backup_path).unwrap();
 
     drop(db);
-    
+
     sleep(Duration::new(6, 0));
     temp_dir.close().unwrap();
 
     let temp_dir = tempdir().unwrap();
 
-    let file =
-        backup_path
-            .read_dir()
-            .unwrap()
-            .next()
-            .unwrap()
-            .unwrap();
+    let file = backup_path.read_dir().unwrap().next().unwrap().unwrap();
 
     let db = DB::load_from(&file.path(), temp_dir.path()).unwrap();
     sleep(Duration::new(1, 0));
