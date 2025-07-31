@@ -1,13 +1,13 @@
 use std::{thread::sleep, time::Duration};
 
-use tempfile::tempdir;
 use epoch_db::DB;
+use tempfile::tempdir;
 
 #[test]
 fn test_ttl() {
     let temp_dir = tempdir().unwrap();
 
-    let db = DB::new(&temp_dir.path()).unwrap();
+    let db = DB::new(temp_dir.path()).unwrap();
 
     db.set("user:1", "Alice", Some(Duration::new(5, 0)))
         .unwrap();
@@ -22,7 +22,7 @@ fn test_ttl() {
 #[test]
 fn test_ttl_update() {
     let temp_dir = tempdir().unwrap();
-    let db = DB::new(&temp_dir.path()).unwrap();
+    let db = DB::new(temp_dir.path()).unwrap();
 
     db.set("user:update", "Alice", Some(Duration::from_secs(2)))
         .unwrap();
@@ -42,7 +42,7 @@ fn test_ttl_update() {
 #[test]
 fn test_ttl_removal_to_permanent() {
     let temp_dir = tempdir().unwrap();
-    let db = DB::new(&temp_dir.path()).unwrap();
+    let db = DB::new(temp_dir.path()).unwrap();
 
     db.set("user:permanent", "Bob", Some(Duration::from_secs(2)))
         .unwrap();
@@ -61,7 +61,7 @@ fn test_ttl_removal_to_permanent() {
 #[test]
 fn test_no_ttl_is_permanent() {
     let temp_dir = tempdir().unwrap();
-    let db = DB::new(&temp_dir.path()).unwrap();
+    let db = DB::new(temp_dir.path()).unwrap();
 
     db.set("user:no_ttl", "Charlie", None).unwrap();
 
@@ -76,7 +76,7 @@ fn test_no_ttl_is_permanent() {
 #[test]
 fn test_manual_removal_of_ttl_key() {
     let temp_dir = tempdir().unwrap();
-    let db = DB::new(&temp_dir.path()).unwrap();
+    let db = DB::new(temp_dir.path()).unwrap();
 
     db.set(
         "user:manual_delete",

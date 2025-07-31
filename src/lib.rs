@@ -14,6 +14,7 @@ use db::errors::TransientError;
 use serde::{Deserialize, Serialize};
 use sled::Tree;
 use std::{
+    path::PathBuf,
     sync::{Arc, atomic::AtomicBool},
     thread::JoinHandle,
 };
@@ -46,6 +47,8 @@ pub struct DB {
     ttl_thread: Option<JoinHandle<Result<(), TransientError>>>,
     /// Signals the ttl_thread to gracefully shutdown, when the DB is dropped
     shutdown: Arc<AtomicBool>,
+    /// Path to the database
+    pub path: PathBuf,
 }
 
 /// Contains additional information about a key, such as its access frequency and lifecycle.

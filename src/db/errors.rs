@@ -1,5 +1,5 @@
 //! This module defines the custom error types used throughout the TransientDB library.
-use std::{error::Error, fmt::Display};
+use std::{error::Error, fmt::Display, path::PathBuf};
 
 /// The primary error enum for the TransientDB library.
 #[derive(Debug)]
@@ -19,6 +19,11 @@ pub enum TransientError {
     SledTransactionError,
     /// Error that occurs when parsing a byte slice to a u64 fails.
     ParsingToU64ByteFailed,
+    FolderNotFound {
+        path: PathBuf,
+    },
+    FileNameDoesntExist,
+    MetadataNotFound,
 }
 
 impl Display for TransientError {
@@ -32,6 +37,11 @@ impl Display for TransientError {
             TransientError::ParsingToU64ByteFailed => {
                 writeln!(f, "Failed to parse a variable to a U64 byte [u8; 8]")
             }
+            TransientError::FolderNotFound { path } => {
+                writeln!(f, "Folder is not found at the path: {:#?}", path)
+            }
+            TransientError::FileNameDoesntExist => writeln!(f, "File name doesnt exist"),
+            TransientError::MetadataNotFound => writeln!(f, "Metadata is not found"),
         }
     }
 }

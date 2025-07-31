@@ -4,6 +4,8 @@
 
 pub mod errors;
 
+use crate::{DB, Metadata};
+use chrono::Local;
 use errors::TransientError;
 use sled::{
     Config,
@@ -11,14 +13,15 @@ use sled::{
 };
 use std::{
     error::Error,
+    fs::File,
+    io::{ErrorKind, Read, Write},
     path::Path,
     str::from_utf8,
     sync::{Arc, atomic::AtomicBool},
     thread::{self, JoinHandle},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
-
-use crate::{DB, Metadata};
+use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
 impl DB {
     /// Creates a new `DB` instance or opens an existing one at the specified path.
@@ -97,7 +100,7 @@ impl DB {
                             );
                         l.map_err(|_| TransientError::SledTransactionError)?;
                     } else {
-                        continue;
+                        break;
                     }
                 }
             }
@@ -109,6 +112,7 @@ impl DB {
             ttl_tree,
             ttl_thread: Some(thread),
             shutdown,
+            path: path.to_path_buf(),
         })
     }
 
@@ -139,10 +143,10 @@ impl DB {
             .transaction(|(data, freq, ttl_tree)| {
                 match freq.get(byte)? {
                     Some(m) => {
-                        let mut meta = Metadata::from_u8(&m.to_vec())
+                        let mut meta = Metadata::from_u8(&m)
                             .map_err(|_| ConflictableTransactionError::Abort(()))?;
                         if let Some(t) = meta.ttl {
-                            let _ = ttl_tree.remove([&t.to_be_bytes()[..], &byte[..]].concat());
+                            let _ = ttl_tree.remove([&t.to_be_bytes()[..], byte].concat());
                         }
                         meta.ttl = ttl_sec;
                         freq.insert(
@@ -163,16 +167,13 @@ impl DB {
 
                 data.insert(byte, val.as_bytes())?;
 
-                match ttl_sec {
-                    Some(d) => {
-                        ttl_tree.insert([&d.to_be_bytes()[..], &byte[..]].concat(), byte)?;
-                    }
-                    None => (),
+                if let Some(d) = ttl_sec {
+                    ttl_tree.insert([&d.to_be_bytes()[..], byte].concat(), byte)?;
                 };
 
                 Ok(())
             });
-        let _ = l.map_err(|_| TransientError::SledTransactionError)?;
+        l.map_err(|_| TransientError::SledTransactionError)?;
 
         Ok(())
     }
@@ -188,7 +189,7 @@ impl DB {
         let byte = key.as_bytes();
         let val = data_tree.get(byte)?;
         match val {
-            Some(val) => Ok(Some(from_utf8(&val.to_vec())?.to_string())),
+            Some(val) => Ok(Some(from_utf8(&val)?.to_string())),
             None => Ok(None),
         }
     }
@@ -207,18 +208,16 @@ impl DB {
             let metadata = freq_tree
                 .get(byte)?
                 .ok_or(TransientError::IncretmentError)?;
-            let meta = Metadata::from_u8(&metadata.to_vec())?;
+            let meta = Metadata::from_u8(&metadata)?;
             let s = freq_tree.compare_and_swap(
                 byte,
                 Some(metadata),
                 Some(meta.freq_incretement().to_u8()?),
             );
-            match s {
-                Ok(ss) => match ss {
-                    Ok(_) => break,
-                    Err(_) => (),
-                },
-                Err(_) => (),
+            if let Ok(ss) = s {
+                if ss.is_ok() {
+                    break;
+                }
             }
         }
 
@@ -241,16 +240,13 @@ impl DB {
                 let meta = freq
                     .get(byte)?
                     .ok_or(ConflictableTransactionError::Abort(()))?;
-                let time = Metadata::from_u8(&meta.to_vec())
+                let time = Metadata::from_u8(&meta)
                     .map_err(|_| ConflictableTransactionError::Abort(()))?
                     .ttl;
                 freq.remove(*byte)?;
 
-                match time {
-                    Some(t) => {
-                        let _ = ttl_tree.remove([&t.to_be_bytes()[..], &byte[..]].concat());
-                    }
-                    None => (),
+                if let Some(t) = time {
+                    let _ = ttl_tree.remove([&t.to_be_bytes()[..], &byte[..]].concat());
                 }
 
                 Ok(())
@@ -269,9 +265,116 @@ impl DB {
         let byte = key.as_bytes();
         let meta = freq_tree.get(byte)?;
         match meta {
-            Some(val) => Ok(Some(Metadata::from_u8(&val.to_vec())?)),
+            Some(val) => Ok(Some(Metadata::from_u8(&val)?)),
             None => Ok(None),
         }
+    }
+
+    pub fn flush(&self) -> Result<(), Box<dyn Error>> {
+        self.data_tree.flush()?;
+        self.meta_tree.flush()?;
+        self.ttl_tree.flush()?;
+
+        Ok(())
+    }
+
+    pub fn backup_to(&self, path: &Path) -> Result<(), Box<dyn Error>> {
+        self.flush()?;
+
+        if !path.is_dir() {
+            Err(TransientError::FolderNotFound {
+                path: path.to_path_buf(),
+            })?;
+        }
+
+        let options =
+            SimpleFileOptions::default().compression_method(zip::CompressionMethod::Bzip2);
+
+        let zip_file = File::create(path.join(format!(
+            "backup-{}.zip",
+            Local::now().format("%Y-%m-%d_%H-%M-%S")
+        )))?;
+
+        let mut zipw = ZipWriter::new(zip_file);
+
+        zipw.start_file("data.epoch", options)?;
+        for i in self.data_tree.iter() {
+            let iu = i?;
+
+            let key = &iu.0;
+            let value = &iu.1;
+            let meta = self
+                .meta_tree
+                .get(key)?
+                .ok_or(TransientError::MetadataNotFound)?;
+
+            // NOTE: A usize is diffrent on diffrent machines
+            // and a usize will never exceed a u64 in lenght lol
+            let kl: u64 = key.len().try_into()?;
+            let vl: u64 = value.len().try_into()?;
+            let ml: u64 = meta.len().try_into()?;
+
+            zipw.write_all(&kl.to_be_bytes())?;
+            zipw.write_all(key)?;
+            zipw.write_all(&vl.to_be_bytes())?;
+            zipw.write_all(value)?;
+            zipw.write_all(&ml.to_be_bytes())?;
+            zipw.write_all(&meta)?;
+        }
+
+        zipw.finish()?;
+
+        Ok(())
+    }
+
+    // WARN: Add a transactional batching algorithm to ensure safety incase of a power outage
+    pub fn load_from(path: &Path, db_path: &Path) -> Result<DB, Box<dyn Error>> {
+        if !path.is_file() {
+            Err(TransientError::FolderNotFound {
+                path: path.to_path_buf(),
+            })?;
+        }
+
+        let db = DB::new(db_path)?;
+
+        let file = File::open(path)?;
+
+        let mut archive = ZipArchive::new(file)?;
+
+        let mut data = archive.by_name("data.epoch")?;
+
+        loop {
+            let mut len: [u8; 8] = [0u8; 8];
+            if let Err(e) = data.read_exact(&mut len) {
+                if let ErrorKind::UnexpectedEof = e.kind() {
+                    break;
+                }
+            }
+
+            let mut key = vec![0; u64::from_be_bytes(len).try_into()?];
+            data.read_exact(&mut key)?;
+
+            data.read_exact(&mut len)?;
+            let mut val = vec![0; u64::from_be_bytes(len).try_into()?];
+            data.read_exact(&mut val)?;
+
+            data.read_exact(&mut len)?;
+            let mut meta_byte = vec![0; u64::from_be_bytes(len).try_into()?];
+            data.read_exact(&mut meta_byte)?;
+
+            let meta = Metadata::from_u8(&meta_byte)?;
+
+            db.meta_tree.insert(&key, meta.to_u8()?)?;
+
+            db.data_tree.insert(&key, val)?;
+
+            if let Some(d) = meta.ttl {
+                db.ttl_tree
+                    .insert([&d.to_be_bytes()[..], &key].concat(), key)?;
+            };
+        }
+
+        Ok(db)
     }
 }
 

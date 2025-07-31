@@ -17,6 +17,8 @@ name = "epoch"
 
 [dependencies]
 bincode = { version = "2.0.1", features = ["serde", "derive"] }
+chrono = "0.4.41"
 serde = { version = "1.0.219", features = ["derive"] }
 sled = "0.34.7"
 tempfile = "3.20.0"
+zip = { version = "4.3.0", features = ["chrono"]}
