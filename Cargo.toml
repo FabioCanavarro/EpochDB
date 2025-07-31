@@ -7,7 +7,7 @@ homepage = "https://github.com/FabioCanavarro/TransientDB"
 readme = "README.md"
 keywords = ["database", "kv-store", "sled", "cache", "ttl"]
 categories = ["database-implementations", "caching", "concurrency", "data-structures"]
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
 
 [lib]
