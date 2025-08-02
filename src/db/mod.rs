@@ -402,13 +402,15 @@ impl<'a> Iterator for DataIter<'a> {
 
         let (kb, vb) = data;
 
-        let meta_tree = self.data.1;
+        let meta_tree = &mut self.data.1;
 
-        let mb = meta_tree.get(kb).unwrap();
+        let mb = meta_tree.get(&kb).unwrap()?;
 
         let key = from_utf8(&kb).unwrap().to_string();
         let value = from_utf8(&vb).unwrap().to_string();
-        let meta = Metadata::from_u8(&mb);
+        let meta = Metadata::from_u8(&mb).unwrap();
+
+        Some((key, value, meta))
 
     }
 
