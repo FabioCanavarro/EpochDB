@@ -392,7 +392,7 @@ pub struct DataIter<'a> {
     pub data: (&'a mut sled::Iter, sled::Tree),
 }
 
-impl<'a> Iterator for DataIter<'a> {
+impl Iterator for DataIter<'_> {
     type Item = (String, String, Metadata);
 
     fn next(&mut self) -> Option<Self::Item> {
