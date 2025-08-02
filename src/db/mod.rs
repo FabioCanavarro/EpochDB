@@ -12,14 +12,7 @@ use sled::{
     transaction::{ConflictableTransactionError, TransactionError, Transactional},
 };
 use std::{
-    error::Error,
-    fs::File,
-    io::{ErrorKind, Read, Write},
-    path::Path,
-    str::from_utf8,
-    sync::{Arc, atomic::AtomicBool},
-    thread::{self, JoinHandle},
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    array::IntoIter, error::Error, fs::File, io::{ErrorKind, Read, Write}, marker::PhantomData, path::Path, str::from_utf8, sync::{atomic::AtomicBool, Arc}, thread::{self, JoinHandle}, time::{Duration, SystemTime, UNIX_EPOCH}
 };
 use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
@@ -376,6 +369,7 @@ impl DB {
 
         Ok(db)
     }
+
 }
 
 impl Drop for DB {
@@ -393,3 +387,45 @@ impl Drop for DB {
             .expect("Joining failed");
     }
 }
+
+pub struct DataIter<'a, T> {
+    pub data: (sled::Iter, sled::Tree),
+    phantomdata: PhantomData<&'a T>
+}
+
+impl<'a, T> Iterator for DataIter<'a, T> {
+    type Item = (&'a str, &'a str, Metadata);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        
+    }
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
