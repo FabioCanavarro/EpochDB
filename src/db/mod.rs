@@ -388,16 +388,28 @@ impl Drop for DB {
     }
 }
 
-pub struct DataIter<'a, T> {
-    pub data: (sled::Iter, sled::Tree),
-    phantomdata: PhantomData<&'a T>
+pub struct DataIter<'a> {
+    pub data: (&'a mut sled::Iter, sled::Tree),
 }
 
-impl<'a, T> Iterator for DataIter<'a, T> {
-    type Item = (&'a str, &'a str, Metadata);
+impl<'a> Iterator for DataIter<'a> {
+    type Item = (String, String, Metadata);
 
     fn next(&mut self) -> Option<Self::Item> {
-        
+        let data_iter = &mut self.data.0;
+
+        let data = data_iter.next()?.unwrap();
+
+        let (kb, vb) = data;
+
+        let meta_tree = self.data.1;
+
+        let mb = meta_tree.get(kb).unwrap();
+
+        let key = from_utf8(&kb).unwrap().to_string();
+        let value = from_utf8(&vb).unwrap().to_string();
+        let meta = Metadata::from_u8(&mb);
+
     }
 
 }
