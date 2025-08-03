@@ -19,6 +19,43 @@ fn test_set() {
 }
 
 #[test]
+fn test_iter() {
+    let temp_dir = tempdir().unwrap();
+
+    let mut db = DB::new(temp_dir.path()).unwrap();
+
+    db.set("user:1", "Alice", None).unwrap();
+    db.set("user:2", "Tony", None).unwrap();
+    db.set("user:3", "Tanned", None).unwrap();
+
+    assert_eq!("Alice", db.get("user:1").unwrap().unwrap());
+    assert_eq!("Tony", db.get("user:2").unwrap().unwrap());
+    assert_eq!("Tanned", db.get("user:3").unwrap().unwrap());
+
+    db.increment_frequency("user:2").unwrap();
+    db.increment_frequency("user:3").unwrap();
+    db.increment_frequency("user:3").unwrap();
+
+    let mut iter = db.iter();
+
+    let (k1, v1, m1) = iter.next().unwrap().unwrap();
+    let (k2, v2, m2) = iter.next().unwrap().unwrap();
+    let (k3, v3, m3) = iter.next().unwrap().unwrap();
+
+    assert_eq!("user:1", k1);
+    assert_eq!("user:2", k2);
+    assert_eq!("user:3", k3);
+
+    assert_eq!(v1, db.get("user:1").unwrap().unwrap());
+    assert_eq!(v2, db.get("user:2").unwrap().unwrap());
+    assert_eq!(v3, db.get("user:3").unwrap().unwrap());
+
+    assert_eq!(m1, db.get_metadata("user:1").unwrap().unwrap());
+    assert_eq!(m2, db.get_metadata("user:2").unwrap().unwrap());
+    assert_eq!(m3, db.get_metadata("user:3").unwrap().unwrap());
+}
+
+#[test]
 fn test_rm() {
     let temp_dir = tempdir().unwrap();
 
