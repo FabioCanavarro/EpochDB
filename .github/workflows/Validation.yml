@@ -16,6 +16,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - name: cargo fmt check
+      run: cargo fmt --check
+    - name: clippy warnings check
+      run: cargo clippy -- -D warnings
     - name: Build
       run: cargo build --verbose
     - name: Run tests
