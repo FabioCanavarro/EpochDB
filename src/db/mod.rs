@@ -12,7 +12,14 @@ use sled::{
     transaction::{ConflictableTransactionError, TransactionError, Transactional},
 };
 use std::{
-    error::Error, fs::File, io::{ErrorKind, Read, Write}, path::Path, str::from_utf8, sync::{atomic::AtomicBool, Arc}, thread::{self, JoinHandle}, time::{Duration, SystemTime, UNIX_EPOCH}
+    error::Error,
+    fs::File,
+    io::{ErrorKind, Read, Write},
+    path::Path,
+    str::from_utf8,
+    sync::{Arc, atomic::AtomicBool},
+    thread::{self, JoinHandle},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
@@ -370,16 +377,11 @@ impl DB {
         Ok(db)
     }
 
-    fn iter(&mut self) -> DataIter {
+    pub fn iter(&mut self) -> DataIter {
         DataIter {
-            data: (
-                 self.data_tree.iter(),
-                self.meta_tree.clone()
-            )
+            data: (self.data_tree.iter(), self.meta_tree.clone()),
         }
-
     }
-
 }
 
 impl Drop for DB {
@@ -410,7 +412,9 @@ impl Iterator for DataIter {
 
         let data = match data_iter.next()? {
             Ok(a) => a,
-            Err(e) => {return Some(Err(Box::new(e)));},
+            Err(e) => {
+                return Some(Err(Box::new(e)));
+            }
         };
 
         let (kb, vb) = data;
@@ -419,55 +423,34 @@ impl Iterator for DataIter {
 
         let mb = match meta_tree.get(&kb) {
             Ok(a) => a,
-            Err(e) => {return Some(Err(Box::new(e)));},
+            Err(e) => {
+                return Some(Err(Box::new(e)));
+            }
         }?;
-
 
         let key = match from_utf8(&kb) {
             Ok(a) => a,
-            Err(e) => {return Some(Err(Box::new(e)));},
-        }.to_string();
+            Err(e) => {
+                return Some(Err(Box::new(e)));
+            }
+        }
+        .to_string();
 
-        let value = match from_utf8(&vb){
+        let value = match from_utf8(&vb) {
             Ok(a) => a,
-            Err(e) => {return Some(Err(Box::new(e)));},
-        }.to_string();
+            Err(e) => {
+                return Some(Err(Box::new(e)));
+            }
+        }
+        .to_string();
 
         let meta = match Metadata::from_u8(&mb) {
             Ok(a) => a,
-            Err(e) => {return Some(Err(Box::new(e)));},
+            Err(e) => {
+                return Some(Err(Box::new(e)));
+            }
         };
 
         Some(Ok((key, value, meta)))
-
     }
-
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
