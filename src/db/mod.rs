@@ -373,7 +373,7 @@ impl DB {
     fn iter(&mut self) -> DataIter {
         DataIter {
             data: (
-                &mut self.data_tree.iter(),
+                 self.data_tree.iter(),
                 self.meta_tree.clone()
             )
         }
@@ -398,11 +398,11 @@ impl Drop for DB {
     }
 }
 
-pub struct DataIter<'a> {
-    pub data: (&'a mut sled::Iter, Arc<sled::Tree>),
+pub struct DataIter {
+    pub data: (sled::Iter, Arc<sled::Tree>),
 }
 
-impl Iterator for DataIter<'_> {
+impl Iterator for DataIter {
     type Item = Result<(String, String, Metadata), Box<dyn Error>>;
 
     fn next(&mut self) -> Option<Self::Item> {
