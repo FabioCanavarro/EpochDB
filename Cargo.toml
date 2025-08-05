@@ -15,6 +15,9 @@ edition = "2024"
 [[bin]]
 name = "epoch"
 
+[[bin]]
+name = "epoch-metric"
+
 [dependencies]
 axum = "0.8.4"
 bincode = { version = "2.0.1", features = ["serde", "derive"] }
@@ -23,5 +26,5 @@ prometheus = "0.14.0"
 serde = { version = "1.0.219", features = ["derive"] }
 sled = "0.34.7"
 tempfile = "3.20.0"
-tokio = "1.47.1"
+tokio = { version = "1.47.1", features = ["macros", "rt-multi-thread"] }
 zip = { version = "4.3.0", features = ["chrono"]}
