@@ -13,4 +13,4 @@ async fn main() {
 }
 
 
-async fn get_metric() {}
+async fn get_metric() { }
