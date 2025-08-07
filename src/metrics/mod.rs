@@ -42,7 +42,7 @@ impl Metrics {
             "Total amount of cache hits"
         );
 
-        let cache_misses_total = Opts::new(
+        let cache_misses_opts = Opts::new(
             "epochdb_cache_misses_total",
             "Total amount of cache misses"
         );
@@ -51,5 +51,21 @@ impl Metrics {
             keys_total_opts,
             &["data", "meta", "ttl"]
         );
+
+        let operations_total = IntGaugeVec::new(
+            operations_total_opts,
+            &["set","get","rm","increment_frequency"]
+        );
+
+        let disk_size = Gauge::with_opts(disk_size_opts);
+
+        let backup_size = Gauge::with_opts(backup_size_opts);
+
+        let ttl_expired_keys_total = IntGauge::with_opts(ttl_expired_keys_total_opts);
+
+        let cache_hits_total = IntGauge::with_opts(cache_hits_opts);
+
+        let cache_misses_total = IntGauge::with_opts(cache_misses_opts);
+
     }
 }
