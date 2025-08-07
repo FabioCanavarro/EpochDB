@@ -21,6 +21,7 @@ use std::{
 
 pub mod db;
 pub mod metadata;
+pub mod metrics;
 
 /// This is the main struct which represents the database.
 ///
