@@ -51,9 +51,13 @@ impl DB {
         let shutdown_clone_ttl_thread = Arc::clone(&shutdown);
         let shutdown_clone_size_thread = Arc::clone(&shutdown);
 
+        // Convert to pathbuf to gain ownership
+        let path_buf = path.to_path_buf();
+
         // Prometheus should be already thread safe, so wrapping it in Mutex<> is unnecesarry
         let metrics = Arc::new(Metrics::new()?);
-        let metrics_clone = Arc::clone(&metrics);
+        let metrics_clone_ttl_thread = Arc::clone(&metrics);
+        let metrics_clone_size_thread = Arc::clone(&metrics);
 
         // TODO: Later have a clean up thread that checks if the following thread is fine and spawn
         // it back and join the thread lol
@@ -101,8 +105,8 @@ impl DB {
                                     let _ = ttl_tree_clone.remove([&time_byte, &byte[..]].concat());
 
                                     // Prometheus Metrics
-                                    metrics_clone.keys_total.with_label_values(&["data","meta","ttl"]).inc();
-                                    metrics_clone.ttl_expired_keys_total.inc();
+                                    metrics_clone_ttl_thread.keys_total.with_label_values(&["data","meta","ttl"]).inc();
+                                    metrics_clone_ttl_thread.ttl_expired_keys_total.inc();
 
                                     Ok(())
                                 },
@@ -123,6 +127,10 @@ impl DB {
                 if shutdown_clone_size_thread.load(std::sync::atomic::Ordering::SeqCst) {
                     break;
                 }
+
+                let metadata = path_buf.metadata().map_err(|_| TransientError::DBMetadataNotFound)?;
+                metrics_clone_size_thread.disk_size.set((metadata.len() as f64) / 1024.0 / 1024.0);
+
                 
             }
             Ok(())
