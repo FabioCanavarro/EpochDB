@@ -1,7 +1,7 @@
 use std::future::ready;
 
-use axum::{Router, response::IntoResponse, routing::get};
-use metrics_exporter_prometheus::{BuildError, PrometheusBuilder, PrometheusHandle};
+use axum::{Router, routing::get};
+use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle};
 use tokio::net::TcpListener;
 
 #[tokio::main]

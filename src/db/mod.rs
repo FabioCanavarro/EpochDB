@@ -4,7 +4,7 @@
 
 pub mod errors;
 
-use crate::{metrics::{self, Metrics}, Metadata, DB};
+use crate::{metrics::Metrics, Metadata, DB};
 use chrono::Local;
 use errors::TransientError;
 use sled::{
