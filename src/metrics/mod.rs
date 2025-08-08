@@ -9,8 +9,6 @@ pub struct Metrics {
     pub disk_size: Gauge,
     pub backup_size: Gauge,
     pub ttl_expired_keys_total: IntCounter,
-    pub cache_hits_total: IntCounter,
-    pub cache_misses_total: IntCounter,
 }
 
 impl Metrics {
@@ -29,11 +27,6 @@ impl Metrics {
             "Total amount of expired ttl keys",
         );
 
-        let cache_hits_opts = Opts::new("epochdb_cache_hits_total", "Total amount of cache hits");
-
-        let cache_misses_opts =
-            Opts::new("epochdb_cache_misses_total", "Total amount of cache misses");
-
         let keys_total = IntGaugeVec::new(keys_total_opts, &["data", "meta", "ttl"])?;
 
         let operations_total = IntCounterVec::new(
@@ -47,18 +40,12 @@ impl Metrics {
 
         let ttl_expired_keys_total = IntCounter::with_opts(ttl_expired_keys_total_opts)?;
 
-        let cache_hits_total = IntCounter::with_opts(cache_hits_opts)?;
-
-        let cache_misses_total = IntCounter::with_opts(cache_misses_opts)?;
-
         Ok(Metrics {
             keys_total,
             operations_total,
             disk_size,
             backup_size,
             ttl_expired_keys_total,
-            cache_hits_total,
-            cache_misses_total,
         })
     }
 }
