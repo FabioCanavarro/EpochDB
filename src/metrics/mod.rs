@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use prometheus::{Gauge, IntCounterVec, IntGauge, IntGaugeVec, Opts};
+use prometheus::{Gauge, IntCounter, IntCounterVec, IntGauge, IntGaugeVec, Opts};
 
 #[derive(Debug)]
 pub struct Metrics {
@@ -8,9 +8,9 @@ pub struct Metrics {
     pub operations_total: IntCounterVec,
     pub disk_size: Gauge,
     pub backup_size: Gauge,
-    pub ttl_expired_keys_total: IntGauge,
-    pub cache_hits_total: IntGauge,
-    pub cache_misses_total: IntGauge,
+    pub ttl_expired_keys_total: IntCounter,
+    pub cache_hits_total: IntCounter,
+    pub cache_misses_total: IntCounter,
 }
 
 impl Metrics {
@@ -45,11 +45,11 @@ impl Metrics {
 
         let backup_size = Gauge::with_opts(backup_size_opts)?;
 
-        let ttl_expired_keys_total = IntGauge::with_opts(ttl_expired_keys_total_opts)?;
+        let ttl_expired_keys_total = IntCounter::with_opts(ttl_expired_keys_total_opts)?;
 
-        let cache_hits_total = IntGauge::with_opts(cache_hits_opts)?;
+        let cache_hits_total = IntCounter::with_opts(cache_hits_opts)?;
 
-        let cache_misses_total = IntGauge::with_opts(cache_misses_opts)?;
+        let cache_misses_total = IntCounter::with_opts(cache_misses_opts)?;
 
         Ok(Metrics {
             keys_total,
