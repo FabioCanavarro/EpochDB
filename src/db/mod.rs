@@ -4,7 +4,7 @@
 
 pub mod errors;
 
-use crate::{metrics::Metrics, Metadata, DB};
+use crate::{metrics::{self, Metrics}, Metadata, DB};
 use chrono::Local;
 use errors::TransientError;
 use sled::{
@@ -50,7 +50,9 @@ impl DB {
         let shutdown: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
         let shutdown_clone = Arc::clone(&shutdown);
 
-        let metrics = Metrics::new()?;
+        // Prometheus should be already thread safe, so wrapping it in Mutex<> is unnecesarry
+        let metrics = Arc::new(Metrics::new()?);
+        let metrics_clone = Arc::clone(&metrics);
 
         // TODO: Later have a clean up thread that checks if the following thread is fine and spawn
         // it back and join the thread lol
@@ -96,6 +98,10 @@ impl DB {
                                     freq.remove(byte)?;
 
                                     let _ = ttl_tree_clone.remove([&time_byte, &byte[..]].concat());
+
+                                    // Prometheus Metrics
+                                    metrics_clone.keys_total.with_label_values(&["data","meta","ttl"]).inc();
+                                    metrics_clone.ttl_expired_keys_total.inc();
 
                                     Ok(())
                                 },
@@ -177,7 +183,10 @@ impl DB {
                 Ok(())
             });
         l.map_err(|_| TransientError::SledTransactionError)?;
+
+        // Prometheus metrics
         self.metrics.operations_total.get_metric_with_label_values(&["set"])?.inc();
+        self.metrics.keys_total.with_label_values(&["data","meta","ttl"]).inc();
 
         Ok(())
     }
@@ -192,6 +201,7 @@ impl DB {
         let data_tree = &self.data_tree;
         let byte = key.as_bytes();
         let val = data_tree.get(byte)?;
+
         self.metrics.operations_total.get_metric_with_label_values(&["get"])?.inc();
 
         match val {
@@ -226,6 +236,7 @@ impl DB {
                 }
             }
         }
+
         self.metrics.operations_total.get_metric_with_label_values(&["increment_frequency"])?.inc();
 
         Ok(())
@@ -252,13 +263,19 @@ impl DB {
                     .ttl;
                 freq.remove(*byte)?;
 
+
+        self.metrics.keys_total.with_label_values(&["data","meta"]).inc();
+
                 if let Some(t) = time {
+                    self.metrics.keys_total.with_label_values(&["ttl"]).inc();
+
                     let _ = ttl_tree.remove([&t.to_be_bytes()[..], &byte[..]].concat());
                 }
 
                 Ok(())
             });
         l.map_err(|_| TransientError::SledTransactionError)?;
+
         self.metrics.operations_total.get_metric_with_label_values(&["rm"])?.inc();
 
         Ok(())
