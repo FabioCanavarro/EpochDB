@@ -331,10 +331,12 @@ impl DB {
         let options =
             SimpleFileOptions::default().compression_method(zip::CompressionMethod::Bzip2);
 
-        let zip_file = File::create(path.join(format!(
+        let backup_name = format!(
             "backup-{}.zip",
             Local::now().format("%Y-%m-%d_%H-%M-%S")
-        )))?;
+        );
+
+        let zip_file = File::create(path.join(&backup_name))?;
 
         let mut zipw = ZipWriter::new(zip_file);
 
@@ -364,6 +366,10 @@ impl DB {
         }
 
         zipw.finish()?;
+
+        let zip_file = File::create(path.join(backup_name))?;
+        let size = zip_file.metadata()?.len();
+        self.metrics.backup_size.set((size as f64) / 1024.0 / 1024.0);
 
         Ok(())
     }
