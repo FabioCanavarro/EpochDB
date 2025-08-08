@@ -48,7 +48,9 @@ pub struct DB {
     ttl_tree: Arc<Tree>,
     /// Manage the background thread which checks for expired keys
     ttl_thread: Option<JoinHandle<Result<(), TransientError>>>,
-    /// Signals the ttl_thread to gracefully shutdown, when the DB is dropped
+    /// Manage the background thread to periodically check the DB Size
+    size_thread: Option<JoinHandle<Result<(), TransientError>>>,
+    /// Signals all threads to gracefully shutdown, when the DB is dropped
     shutdown: Arc<AtomicBool>,
     /// Path to the database
     pub path: PathBuf,

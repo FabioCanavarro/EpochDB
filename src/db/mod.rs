@@ -4,7 +4,7 @@
 
 pub mod errors;
 
-use crate::{metrics::{self, Metrics}, Metadata, DB};
+use crate::{metrics::Metrics, Metadata, DB};
 use chrono::Local;
 use errors::TransientError;
 use sled::{
@@ -48,7 +48,8 @@ impl DB {
         let data_tree_clone = Arc::clone(&data_tree);
 
         let shutdown: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
-        let shutdown_clone = Arc::clone(&shutdown);
+        let shutdown_clone_ttl_thread = Arc::clone(&shutdown);
+        let shutdown_clone_size_thread = Arc::clone(&shutdown);
 
         // Prometheus should be already thread safe, so wrapping it in Mutex<> is unnecesarry
         let metrics = Arc::new(Metrics::new()?);
@@ -57,11 +58,11 @@ impl DB {
         // TODO: Later have a clean up thread that checks if the following thread is fine and spawn
         // it back and join the thread lol
 
-        let thread: JoinHandle<Result<(), TransientError>> = thread::spawn(move || {
+        let ttl_thread: JoinHandle<Result<(), TransientError>> = thread::spawn(move || {
             loop {
                 thread::sleep(Duration::new(0, 100000000));
 
-                if shutdown_clone.load(std::sync::atomic::Ordering::SeqCst) {
+                if shutdown_clone_ttl_thread.load(std::sync::atomic::Ordering::SeqCst) {
                     break;
                 }
 
@@ -114,11 +115,25 @@ impl DB {
             }
             Ok(())
         });
+
+        let size_thread: JoinHandle<Result<(), TransientError>> = thread::spawn(move || {
+            loop {
+                thread::sleep(Duration::new(0, 100000000));
+
+                if shutdown_clone_size_thread.load(std::sync::atomic::Ordering::SeqCst) {
+                    break;
+                }
+                
+            }
+            Ok(())
+        });
+
         Ok(DB {
             data_tree,
             meta_tree,
             ttl_tree,
-            ttl_thread: Some(thread),
+            ttl_thread: Some(ttl_thread),
+            size_thread: Some(size_thread),
             shutdown,
             path: path.to_path_buf(),
             metrics
@@ -423,6 +438,14 @@ impl Drop for DB {
             .expect("Fail to take ownership of ttl_thread")
             .join()
             .expect("Joining failed");
+
+        let _ = self
+            .size_thread
+            .take()
+            .expect("Fail to take ownership of ttl_thread")
+            .join()
+            .expect("Joining failed");
+
     }
 }
 

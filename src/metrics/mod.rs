@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use prometheus::{Gauge, IntCounter, IntCounterVec, IntGauge, IntGaugeVec, Opts};
+use prometheus::{Gauge, IntCounter, IntCounterVec, IntGaugeVec, Opts};
 
 #[derive(Debug)]
 pub struct Metrics {
