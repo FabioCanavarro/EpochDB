@@ -10,8 +10,10 @@ async fn main() {
 
     let app = Router::new().route("/metrics", get(move || ready(recorder_handle.render())));
 
+    println!("Binding to port 3000");
     let listener = TcpListener::bind("0.0.0.0:3000").await.unwrap();
 
+    println!("Serving...");
     axum::serve(listener, app).await.unwrap();
 }
 
