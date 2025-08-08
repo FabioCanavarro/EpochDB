@@ -1,10 +1,11 @@
 use std::error::Error;
 
-use prometheus::{Gauge, IntGauge, IntGaugeVec, Opts};
+use prometheus::{Gauge, IntCounterVec, IntGauge, IntGaugeVec, Opts};
 
+#[derive(Debug)]
 pub struct Metrics {
     pub keys_total: IntGaugeVec,
-    pub operations_total: IntGaugeVec,
+    pub operations_total: IntCounterVec,
     pub disk_size: Gauge,
     pub backup_size: Gauge,
     pub ttl_expired_keys_total: IntGauge,
@@ -13,7 +14,7 @@ pub struct Metrics {
 }
 
 impl Metrics {
-    fn new() -> Result<Metrics, Box<dyn Error>> {
+    pub fn new() -> Result<Metrics, Box<dyn Error>> {
         let keys_total_opts = Opts::new("epochdb_keys_total", "Total number of keys in a tree");
 
         let operations_total_opts =
@@ -35,7 +36,7 @@ impl Metrics {
 
         let keys_total = IntGaugeVec::new(keys_total_opts, &["data", "meta", "ttl"])?;
 
-        let operations_total = IntGaugeVec::new(
+        let operations_total = IntCounterVec::new(
             operations_total_opts,
             &["set", "get", "rm", "increment_frequency"],
         )?;

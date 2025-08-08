@@ -4,7 +4,7 @@
 
 pub mod errors;
 
-use crate::{DB, Metadata};
+use crate::{metrics::{self, Metrics}, Metadata, DB};
 use chrono::Local;
 use errors::TransientError;
 use sled::{
@@ -33,7 +33,7 @@ impl DB {
     /// # Errors
     ///
     /// Returns a `sled::Error` if the database cannot be opened at the given path.
-    pub fn new(path: &Path) -> Result<DB, sled::Error> {
+    pub fn new(path: &Path) -> Result<DB, Box<dyn Error>> {
         let db = Config::new()
             .path(path)
             .cache_capacity(512 * 1024 * 1024)
@@ -49,6 +49,8 @@ impl DB {
 
         let shutdown: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
         let shutdown_clone = Arc::clone(&shutdown);
+
+        let metrics = Metrics::new()?;
 
         // TODO: Later have a clean up thread that checks if the following thread is fine and spawn
         // it back and join the thread lol
@@ -113,6 +115,7 @@ impl DB {
             ttl_thread: Some(thread),
             shutdown,
             path: path.to_path_buf(),
+            metrics
         })
     }
 
@@ -174,6 +177,7 @@ impl DB {
                 Ok(())
             });
         l.map_err(|_| TransientError::SledTransactionError)?;
+        self.metrics.operations_total.get_metric_with_label_values(&["set"])?.inc();
 
         Ok(())
     }
@@ -188,6 +192,8 @@ impl DB {
         let data_tree = &self.data_tree;
         let byte = key.as_bytes();
         let val = data_tree.get(byte)?;
+        self.metrics.operations_total.get_metric_with_label_values(&["get"])?.inc();
+
         match val {
             Some(val) => Ok(Some(from_utf8(&val)?.to_string())),
             None => Ok(None),
@@ -220,6 +226,7 @@ impl DB {
                 }
             }
         }
+        self.metrics.operations_total.get_metric_with_label_values(&["increment_frequency"])?.inc();
 
         Ok(())
     }
@@ -252,6 +259,8 @@ impl DB {
                 Ok(())
             });
         l.map_err(|_| TransientError::SledTransactionError)?;
+        self.metrics.operations_total.get_metric_with_label_values(&["rm"])?.inc();
+
         Ok(())
     }
 

@@ -19,6 +19,8 @@ use std::{
     thread::JoinHandle,
 };
 
+use crate::metrics::Metrics;
+
 pub mod db;
 pub mod metadata;
 pub mod metrics;
@@ -50,6 +52,8 @@ pub struct DB {
     shutdown: Arc<AtomicBool>,
     /// Path to the database
     pub path: PathBuf,
+    /// Prometheus metrics
+    metrics : Metrics
 }
 
 /// Contains additional information about a key, such as its access frequency and lifecycle.
