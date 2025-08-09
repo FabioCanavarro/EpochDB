@@ -27,11 +27,11 @@ impl Metrics {
             "Total amount of expired ttl keys",
         );
 
-        let keys_total = IntGaugeVec::new(keys_total_opts, &["data", "meta", "ttl"])?;
+        let keys_total = IntGaugeVec::new(keys_total_opts, &["tree"])?;
 
         let operations_total = IntCounterVec::new(
             operations_total_opts,
-            &["set", "get", "rm", "increment_frequency"],
+            &["operations"],
         )?;
 
         let disk_size = Gauge::with_opts(disk_size_opts)?;

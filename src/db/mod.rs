@@ -7,6 +7,7 @@ pub mod errors;
 use crate::{metrics::Metrics, Metadata, DB};
 use chrono::Local;
 use errors::TransientError;
+use prometheus::register_int_counter_vec;
 use sled::{
     Config,
     transaction::{ConflictableTransactionError, TransactionError, Transactional},
@@ -105,7 +106,9 @@ impl DB {
                                     let _ = ttl_tree_clone.remove([&time_byte, &byte[..]].concat());
 
                                     // Prometheus Metrics
-                                    metrics_clone_ttl_thread.keys_total.with_label_values(&["data","meta","ttl"]).inc();
+                                    metrics_clone_ttl_thread.keys_total.with_label_values(&["data"]).inc();
+                                    metrics_clone_ttl_thread.keys_total.with_label_values(&["meta"]).inc();
+                                    metrics_clone_ttl_thread.keys_total.with_label_values(&["ttl"]).inc();
                                     metrics_clone_ttl_thread.ttl_expired_keys_total.inc();
 
                                     Ok(())
@@ -209,7 +212,9 @@ impl DB {
 
         // Prometheus metrics
         self.metrics.operations_total.get_metric_with_label_values(&["set"])?.inc();
-        self.metrics.keys_total.with_label_values(&["data","meta","ttl"]).inc();
+        self.metrics.keys_total.get_metric_with_label_values(&["data"])?.inc();
+        self.metrics.keys_total.get_metric_with_label_values(&["meta"])?.inc();
+        self.metrics.keys_total.get_metric_with_label_values(&["ttl"])?.inc();
 
         Ok(())
     }
@@ -287,7 +292,8 @@ impl DB {
                 freq.remove(*byte)?;
 
 
-        self.metrics.keys_total.with_label_values(&["data","meta"]).inc();
+        self.metrics.keys_total.with_label_values(&["data"]).inc();
+        self.metrics.keys_total.with_label_values(&["meta"]).inc();
 
                 if let Some(t) = time {
                     self.metrics.keys_total.with_label_values(&["ttl"]).inc();
