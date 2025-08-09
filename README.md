@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/FabioCanavarro/EpochDB/actions/workflows/rust.yml"><img src="https://github.com/FabioCanavarro/EpochDB/actions/workflows/rust.yml/badge.svg" alt="CI Status"></a>
+  <a href="https://github.com/FabioCanavarro/EpochDB/actions/workflows/Validation.yml"><img src="https://github.com/FabioCanavarro/EpochDB/actions/workflows/Validation.yml/badge.svg" alt="CI Status"></a>
   <a href="https://crates.io/crates/epoch-db"><img src="https://img.shields.io/crates/v/epoch-db.svg" alt="Crates.io"></a>
   <a href="https://docs.rs/epoch-db"><img src="https://docs.rs/epoch-db/badge.svg" alt="Docs.rs"></a>
   <a href="https://github.com/FabioCanavarro/EpochDB/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg" alt="License"></a>
