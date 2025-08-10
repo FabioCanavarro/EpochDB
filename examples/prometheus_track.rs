@@ -4,13 +4,13 @@ use axum::{extract::State, routing::get, Router};
 use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle};
 use tokio::net::TcpListener;
 
+// Function to open the server
 #[tokio::main]
 async fn server_main() {
     let recorder_handle = Arc::new(setup_prometheus_metric_recorder());
 
     let app = Router::new().route("/metrics", get(metrics_handler)).with_state(recorder_handle);
 
-    metrics::counter!("operations_total", "type" => "test").increment(1);
     let listener = TcpListener::bind("0.0.0.0:3001").await.unwrap();
 
     axum::serve(listener, app).await.unwrap();
@@ -26,7 +26,6 @@ async fn metrics_handler(State(state): State<Arc<PrometheusHandle>>) -> String {
 
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-
     thread::spawn(server_main);
 
     // Let the thread build the app first
@@ -34,7 +33,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     sleep(Duration::new(15, 0));
 
     let db = DB::new(Path::new("./databasetest")).unwrap();
-    // What if I drop everything then re open it?
 
     db.set("H", "haha", None).unwrap();
     db.set("HAHAHHAH", "Skib", None).unwrap();
@@ -47,8 +45,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     db.backup_to(Path::new("./backup/")).unwrap();
 
-loop {
-    db.get("HI").unwrap();
-}
     Ok(())
 }
+
+// TODO: Add more comments to this example
