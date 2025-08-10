@@ -87,7 +87,7 @@ fn test_backup_get_metadata() {
 }
 
 #[test]
-fn test_ttl() {
+fn test_backup_ttl() {
     let temp_dir = tempdir().unwrap();
     let backup = tempdir().unwrap();
     let backup_path = backup.path();
