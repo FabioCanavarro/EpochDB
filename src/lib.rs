@@ -19,8 +19,6 @@ use std::{
     thread::JoinHandle,
 };
 
-use crate::metrics::Metrics;
-
 pub mod db;
 pub mod metadata;
 pub mod metrics;

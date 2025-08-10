@@ -7,7 +7,6 @@ pub mod errors;
 use crate::{metrics::Metrics, Metadata, DB};
 use chrono::Local;
 use errors::TransientError;
-use prometheus::register_int_counter_vec;
 use sled::{
     Config,
     transaction::{ConflictableTransactionError, TransactionError, Transactional},
@@ -52,8 +51,6 @@ impl DB {
         let shutdown_clone_ttl_thread = Arc::clone(&shutdown);
         let shutdown_clone_size_thread = Arc::clone(&shutdown);
         
-        let metric = Metrics{};
-
         // Convert to pathbuf to gain ownership
         let path_buf = path.to_path_buf();
 

@@ -1,5 +1,3 @@
-use std::error::Error;
-
 use metrics::{counter, gauge};
 
 /// A stateless struct that provides a clean, organized API for updating
@@ -30,12 +28,12 @@ impl Metrics {
 
     /// Sets the current total disk size of the database.
     pub fn set_disk_size(bytes: f64) {
-        gauge!("epochdb_disk_size_bytes").set(bytes as f64);
+        gauge!("epochdb_disk_size_bytes").set(bytes);
     }
 
     /// Sets the size of the last successful backup.
     pub fn set_backup_size(bytes: f64) {
-        gauge!("epochdb_backup_size_bytes").set(bytes as f64);
+        gauge!("epochdb_backup_size_bytes").set(bytes);
     }
 
     /// Increments the counter for expired TTL keys.
