@@ -33,13 +33,13 @@ impl Display for TransientError {
             TransientError::IncretmentError => writeln!(f, "Incretment has failed"),
             TransientError::ParsingToByteError => writeln!(f, "Parsing to byte failed"),
             TransientError::ParsingToUTF8Error => writeln!(f, "Parsing to utf8 failed"),
-            TransientError::SledError { error } => writeln!(f, "Sled failed {}", error),
+            TransientError::SledError { error } => writeln!(f, "Sled failed {error}"),
             TransientError::SledTransactionError => writeln!(f, "Sled Transaction failed"),
             TransientError::ParsingToU64ByteFailed => {
                 writeln!(f, "Failed to parse a variable to a U64 byte [u8; 8]")
             }
             TransientError::FolderNotFound { path } => {
-                writeln!(f, "Folder is not found at the path: {:#?}", path)
+                writeln!(f, "Folder is not found at the path: {path:#?}")
             }
             TransientError::FileNameDoesntExist => writeln!(f, "File name doesnt exist"),
             TransientError::MetadataNotFound => writeln!(f, "Metadata is not found"),
