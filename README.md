@@ -43,7 +43,7 @@ Get started with `EpochDB` by adding it to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-epoch-db = "0.2.2"
+epoch-db = "0.2.5"
 ````
 
 ### Basic Usage

@@ -4,7 +4,7 @@
 
 pub mod errors;
 
-use crate::{DB, Metadata};
+use crate::{DB, Metadata, metrics::Metrics};
 use chrono::Local;
 use errors::TransientError;
 use sled::{
@@ -33,7 +33,7 @@ impl DB {
     /// # Errors
     ///
     /// Returns a `sled::Error` if the database cannot be opened at the given path.
-    pub fn new(path: &Path) -> Result<DB, sled::Error> {
+    pub fn new(path: &Path) -> Result<DB, Box<dyn Error>> {
         let db = Config::new()
             .path(path)
             .cache_capacity(512 * 1024 * 1024)
@@ -48,16 +48,20 @@ impl DB {
         let data_tree_clone = Arc::clone(&data_tree);
 
         let shutdown: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
-        let shutdown_clone = Arc::clone(&shutdown);
+        let shutdown_clone_ttl_thread = Arc::clone(&shutdown);
+        let shutdown_clone_size_thread = Arc::clone(&shutdown);
+
+        // Convert to pathbuf to gain ownership
+        let path_buf = path.to_path_buf();
 
         // TODO: Later have a clean up thread that checks if the following thread is fine and spawn
         // it back and join the thread lol
 
-        let thread: JoinHandle<Result<(), TransientError>> = thread::spawn(move || {
+        let ttl_thread: JoinHandle<Result<(), TransientError>> = thread::spawn(move || {
             loop {
                 thread::sleep(Duration::new(0, 100000000));
 
-                if shutdown_clone.load(std::sync::atomic::Ordering::SeqCst) {
+                if shutdown_clone_ttl_thread.load(std::sync::atomic::Ordering::SeqCst) {
                     break;
                 }
 
@@ -95,6 +99,12 @@ impl DB {
 
                                     let _ = ttl_tree_clone.remove([&time_byte, &byte[..]].concat());
 
+                                    // Prometheus Metrics
+                                    Metrics::dec_keys_total("data");
+                                    Metrics::dec_keys_total("meta");
+                                    Metrics::dec_keys_total("ttl");
+                                    Metrics::increment_ttl_expired_keys();
+
                                     Ok(())
                                 },
                             );
@@ -106,11 +116,29 @@ impl DB {
             }
             Ok(())
         });
+
+        let size_thread: JoinHandle<Result<(), TransientError>> = thread::spawn(move || {
+            loop {
+                thread::sleep(Duration::new(0, 100000000));
+
+                if shutdown_clone_size_thread.load(std::sync::atomic::Ordering::SeqCst) {
+                    break;
+                }
+
+                let metadata = path_buf
+                    .metadata()
+                    .map_err(|_| TransientError::DBMetadataNotFound)?;
+                Metrics::set_disk_size((metadata.len() as f64) / 1024.0 / 1024.0);
+            }
+            Ok(())
+        });
+
         Ok(DB {
             data_tree,
             meta_tree,
             ttl_tree,
-            ttl_thread: Some(thread),
+            ttl_thread: Some(ttl_thread),
+            size_thread: Some(size_thread),
             shutdown,
             path: path.to_path_buf(),
         })
@@ -169,11 +197,17 @@ impl DB {
 
                 if let Some(d) = ttl_sec {
                     ttl_tree.insert([&d.to_be_bytes()[..], byte].concat(), byte)?;
+                    Metrics::inc_keys_total("ttl");
                 };
 
                 Ok(())
             });
         l.map_err(|_| TransientError::SledTransactionError)?;
+
+        // Prometheus metrics
+        Metrics::increment_operations("set");
+        Metrics::inc_keys_total("data");
+        Metrics::inc_keys_total("meta");
 
         Ok(())
     }
@@ -188,6 +222,9 @@ impl DB {
         let data_tree = &self.data_tree;
         let byte = key.as_bytes();
         let val = data_tree.get(byte)?;
+
+        Metrics::increment_operations("get");
+
         match val {
             Some(val) => Ok(Some(from_utf8(&val)?.to_string())),
             None => Ok(None),
@@ -220,6 +257,7 @@ impl DB {
                 }
             }
         }
+        Metrics::increment_operations("increment_frequency");
 
         Ok(())
     }
@@ -245,13 +283,21 @@ impl DB {
                     .ttl;
                 freq.remove(*byte)?;
 
+                Metrics::dec_keys_total("data");
+                Metrics::dec_keys_total("meta");
+
                 if let Some(t) = time {
+                    Metrics::dec_keys_total("ttl");
+
                     let _ = ttl_tree.remove([&t.to_be_bytes()[..], &byte[..]].concat());
                 }
 
                 Ok(())
             });
         l.map_err(|_| TransientError::SledTransactionError)?;
+
+        Metrics::increment_operations("rm");
+
         Ok(())
     }
 
@@ -290,10 +336,9 @@ impl DB {
         let options =
             SimpleFileOptions::default().compression_method(zip::CompressionMethod::Bzip2);
 
-        let zip_file = File::create(path.join(format!(
-            "backup-{}.zip",
-            Local::now().format("%Y-%m-%d_%H-%M-%S")
-        )))?;
+        let backup_name = format!("backup-{}.zip", Local::now().format("%Y-%m-%d_%H-%M-%S"));
+
+        let zip_file = File::create(path.join(&backup_name))?;
 
         let mut zipw = ZipWriter::new(zip_file);
 
@@ -323,6 +368,10 @@ impl DB {
         }
 
         zipw.finish()?;
+
+        let zip_file = File::create(path.join(backup_name))?;
+        let size = zip_file.metadata()?.len();
+        Metrics::set_backup_size((size as f64) / 1024.0 / 1024.0);
 
         Ok(())
     }
@@ -393,6 +442,13 @@ impl Drop for DB {
 
         let _ = self
             .ttl_thread
+            .take()
+            .expect("Fail to take ownership of ttl_thread")
+            .join()
+            .expect("Joining failed");
+
+        let _ = self
+            .size_thread
             .take()
             .expect("Fail to take ownership of ttl_thread")
             .join()
