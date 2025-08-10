@@ -4,7 +4,7 @@
 
 pub mod errors;
 
-use crate::{metrics::Metrics, Metadata, DB};
+use crate::{DB, Metadata, metrics::Metrics};
 use chrono::Local;
 use errors::TransientError;
 use sled::{
@@ -50,7 +50,7 @@ impl DB {
         let shutdown: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
         let shutdown_clone_ttl_thread = Arc::clone(&shutdown);
         let shutdown_clone_size_thread = Arc::clone(&shutdown);
-        
+
         // Convert to pathbuf to gain ownership
         let path_buf = path.to_path_buf();
 
@@ -104,7 +104,6 @@ impl DB {
                                     Metrics::dec_keys_total("meta");
                                     Metrics::dec_keys_total("ttl");
                                     Metrics::increment_ttl_expired_keys();
-                            
 
                                     Ok(())
                                 },
@@ -126,10 +125,10 @@ impl DB {
                     break;
                 }
 
-                let metadata = path_buf.metadata().map_err(|_| TransientError::DBMetadataNotFound)?;
+                let metadata = path_buf
+                    .metadata()
+                    .map_err(|_| TransientError::DBMetadataNotFound)?;
                 Metrics::set_disk_size((metadata.len() as f64) / 1024.0 / 1024.0);
-
-                
             }
             Ok(())
         });
@@ -206,7 +205,7 @@ impl DB {
         l.map_err(|_| TransientError::SledTransactionError)?;
 
         // Prometheus metrics
-        Metrics::increment_operations("set"); 
+        Metrics::increment_operations("set");
         Metrics::inc_keys_total("data");
         Metrics::inc_keys_total("meta");
 
@@ -294,10 +293,10 @@ impl DB {
                 }
 
                 Ok(())
-        });
+            });
         l.map_err(|_| TransientError::SledTransactionError)?;
 
-       Metrics::increment_operations("rm"); 
+        Metrics::increment_operations("rm");
 
         Ok(())
     }
@@ -337,10 +336,7 @@ impl DB {
         let options =
             SimpleFileOptions::default().compression_method(zip::CompressionMethod::Bzip2);
 
-        let backup_name = format!(
-            "backup-{}.zip",
-            Local::now().format("%Y-%m-%d_%H-%M-%S")
-        );
+        let backup_name = format!("backup-{}.zip", Local::now().format("%Y-%m-%d_%H-%M-%S"));
 
         let zip_file = File::create(path.join(&backup_name))?;
 
@@ -457,7 +453,6 @@ impl Drop for DB {
             .expect("Fail to take ownership of ttl_thread")
             .join()
             .expect("Joining failed");
-
     }
 }
 

@@ -1,7 +1,12 @@
+use axum::{Router, extract::State, routing::get};
 use epoch_db::DB;
-use std::{path::Path, sync::Arc, thread::{self, sleep}, time::Duration};
-use axum::{extract::State, routing::get, Router};
 use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle};
+use std::{
+    path::Path,
+    sync::Arc,
+    thread::{self, sleep},
+    time::Duration,
+};
 use tokio::net::TcpListener;
 
 // Function to open the server
@@ -9,7 +14,9 @@ use tokio::net::TcpListener;
 async fn server_main() {
     let recorder_handle = Arc::new(setup_prometheus_metric_recorder());
 
-    let app = Router::new().route("/metrics", get(metrics_handler)).with_state(recorder_handle);
+    let app = Router::new()
+        .route("/metrics", get(metrics_handler))
+        .with_state(recorder_handle);
 
     let listener = TcpListener::bind("0.0.0.0:3001").await.unwrap();
 
@@ -24,7 +31,6 @@ async fn metrics_handler(State(state): State<Arc<PrometheusHandle>>) -> String {
     state.render()
 }
 
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     thread::spawn(server_main);
 
@@ -38,7 +44,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     db.set("HAHAHHAH", "Skib", None).unwrap();
     db.set("HI", "h", None).unwrap();
     db.set("Chronos", "Temporal", None).unwrap();
-    db.set("pop", "HAHAHAHH", Some(Duration::new(0, 100000))).unwrap();
+    db.set("pop", "HAHAHAHH", Some(Duration::new(0, 100000)))
+        .unwrap();
     for i in 0..1000 {
         db.get("HI").unwrap();
         db.set(&format!("{i}"), "h", None).unwrap();

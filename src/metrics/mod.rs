@@ -41,4 +41,3 @@ impl Metrics {
         counter!("epochdb_ttl_expired_keys_total").increment(1);
     }
 }
-

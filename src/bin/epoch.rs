@@ -1,7 +1,6 @@
 use epoch_db::DB;
 use std::{path::Path, time::Duration};
 
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let db = DB::new(Path::new("./databasetest")).unwrap();
 
@@ -9,7 +8,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     db.set("HAHAHHAH", "Skib", None).unwrap();
     db.set("HI", "h", None).unwrap();
     db.set("Chronos", "Temporal", None).unwrap();
-    db.set("pop", "HAHAHAHH", Some(Duration::new(0, 100000))).unwrap();
+    db.set("pop", "HAHAHAHH", Some(Duration::new(0, 100000)))
+        .unwrap();
     for i in 0..1000 {
         db.get("HI").unwrap();
         db.set(&format!("{i}"), "h", None).unwrap();
