@@ -1,51 +1,46 @@
 use std::error::Error;
 
-use prometheus::{Gauge, IntCounter, IntCounterVec, IntGaugeVec, Opts};
+use metrics::{counter, gauge};
 
+/// A stateless struct that provides a clean, organized API for updating
+/// the application's global Prometheus metrics via the `metrics` facade.
 #[derive(Debug)]
-pub struct Metrics {
-    pub keys_total: IntGaugeVec,
-    pub operations_total: IntCounterVec,
-    pub disk_size: Gauge,
-    pub backup_size: Gauge,
-    pub ttl_expired_keys_total: IntCounter,
-}
+pub struct Metrics {}
 
 impl Metrics {
-    pub fn new() -> Result<Metrics, Box<dyn Error>> {
-        let keys_total_opts = Opts::new("epochdb_keys_total", "Total number of keys in a tree");
+    /// Sets the current number of keys for a given tree.
+    pub fn set_keys_total(tree: &str, value: u64) {
+        gauge!("epochdb_keys_total", "tree" => tree.to_string()).set(value as f64);
+    }
 
-        let operations_total_opts =
-            Opts::new("epochdb_operations_total", "Total number of operations");
+    /// Sets the current number of keys for a given tree.
+    pub fn inc_keys_total(tree: &str) {
+        gauge!("epochdb_keys_total", "tree" => tree.to_string()).increment(1);
+    }
 
-        let disk_size_opts = Opts::new("epochdb_disk_size", "Size of the directory");
+    /// Sets the current number of keys for a given tree.
+    pub fn dec_keys_total(tree: &str) {
+        gauge!("epochdb_keys_total", "tree" => tree.to_string()).decrement(1);
+    }
 
-        let backup_size_opts = Opts::new("epochdb_backup_size", "Size of the backup");
+    /// Increments the counter for a specific database operation.
+    pub fn increment_operations(op: &str) {
+        counter!("epochdb_operations_total", "operation" => op.to_string()).increment(1);
+    }
 
-        let ttl_expired_keys_total_opts = Opts::new(
-            "epochdb_ttl_expired_keys_total_opts",
-            "Total amount of expired ttl keys",
-        );
+    /// Sets the current total disk size of the database.
+    pub fn set_disk_size(bytes: f64) {
+        gauge!("epochdb_disk_size_bytes").set(bytes as f64);
+    }
 
-        let keys_total = IntGaugeVec::new(keys_total_opts, &["tree"])?;
+    /// Sets the size of the last successful backup.
+    pub fn set_backup_size(bytes: f64) {
+        gauge!("epochdb_backup_size_bytes").set(bytes as f64);
+    }
 
-        let operations_total = IntCounterVec::new(
-            operations_total_opts,
-            &["operations"],
-        )?;
-
-        let disk_size = Gauge::with_opts(disk_size_opts)?;
-
-        let backup_size = Gauge::with_opts(backup_size_opts)?;
-
-        let ttl_expired_keys_total = IntCounter::with_opts(ttl_expired_keys_total_opts)?;
-
-        Ok(Metrics {
-            keys_total,
-            operations_total,
-            disk_size,
-            backup_size,
-            ttl_expired_keys_total,
-        })
+    /// Increments the counter for expired TTL keys.
+    pub fn increment_ttl_expired_keys() {
+        counter!("epochdb_ttl_expired_keys_total").increment(1);
     }
 }
+

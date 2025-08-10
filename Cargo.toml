@@ -15,13 +15,11 @@ edition = "2024"
 [[bin]]
 name = "epoch"
 
-[[bin]]
-name = "epoch-metric"
-
 [dependencies]
 axum = "0.8.4"
 bincode = { version = "2.0.1", features = ["serde", "derive"] }
 chrono = "0.4.41"
+metrics = "0.24.2"
 metrics-exporter-prometheus = "0.17.2"
 prometheus = "0.14.0"
 serde = { version = "1.0.219", features = ["derive"] }

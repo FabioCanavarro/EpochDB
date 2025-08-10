@@ -54,8 +54,6 @@ pub struct DB {
     shutdown: Arc<AtomicBool>,
     /// Path to the database
     pub path: PathBuf,
-    /// Prometheus metrics struct
-    metrics : Arc<Metrics>
 }
 
 /// Contains additional information about a key, such as its access frequency and lifecycle.

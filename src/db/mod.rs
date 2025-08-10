@@ -51,14 +51,11 @@ impl DB {
         let shutdown: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
         let shutdown_clone_ttl_thread = Arc::clone(&shutdown);
         let shutdown_clone_size_thread = Arc::clone(&shutdown);
+        
+        let metric = Metrics{};
 
         // Convert to pathbuf to gain ownership
         let path_buf = path.to_path_buf();
-
-        // Prometheus should be already thread safe, so wrapping it in Mutex<> is unnecesarry
-        let metrics = Arc::new(Metrics::new()?);
-        let metrics_clone_ttl_thread = Arc::clone(&metrics);
-        let metrics_clone_size_thread = Arc::clone(&metrics);
 
         // TODO: Later have a clean up thread that checks if the following thread is fine and spawn
         // it back and join the thread lol
@@ -106,10 +103,11 @@ impl DB {
                                     let _ = ttl_tree_clone.remove([&time_byte, &byte[..]].concat());
 
                                     // Prometheus Metrics
-                                    metrics_clone_ttl_thread.keys_total.with_label_values(&["data"]).inc();
-                                    metrics_clone_ttl_thread.keys_total.with_label_values(&["meta"]).inc();
-                                    metrics_clone_ttl_thread.keys_total.with_label_values(&["ttl"]).inc();
-                                    metrics_clone_ttl_thread.ttl_expired_keys_total.inc();
+                                    Metrics::dec_keys_total("data");
+                                    Metrics::dec_keys_total("meta");
+                                    Metrics::dec_keys_total("ttl");
+                                    Metrics::increment_ttl_expired_keys();
+                            
 
                                     Ok(())
                                 },
@@ -132,7 +130,7 @@ impl DB {
                 }
 
                 let metadata = path_buf.metadata().map_err(|_| TransientError::DBMetadataNotFound)?;
-                metrics_clone_size_thread.disk_size.set((metadata.len() as f64) / 1024.0 / 1024.0);
+                Metrics::set_disk_size((metadata.len() as f64) / 1024.0 / 1024.0);
 
                 
             }
@@ -147,7 +145,6 @@ impl DB {
             size_thread: Some(size_thread),
             shutdown,
             path: path.to_path_buf(),
-            metrics
         })
     }
 
@@ -204,6 +201,7 @@ impl DB {
 
                 if let Some(d) = ttl_sec {
                     ttl_tree.insert([&d.to_be_bytes()[..], byte].concat(), byte)?;
+                    Metrics::inc_keys_total("ttl");
                 };
 
                 Ok(())
@@ -211,10 +209,9 @@ impl DB {
         l.map_err(|_| TransientError::SledTransactionError)?;
 
         // Prometheus metrics
-        self.metrics.operations_total.get_metric_with_label_values(&["set"])?.inc();
-        self.metrics.keys_total.get_metric_with_label_values(&["data"])?.inc();
-        self.metrics.keys_total.get_metric_with_label_values(&["meta"])?.inc();
-        self.metrics.keys_total.get_metric_with_label_values(&["ttl"])?.inc();
+        Metrics::increment_operations("set"); 
+        Metrics::inc_keys_total("data");
+        Metrics::inc_keys_total("meta");
 
         Ok(())
     }
@@ -230,7 +227,7 @@ impl DB {
         let byte = key.as_bytes();
         let val = data_tree.get(byte)?;
 
-        self.metrics.operations_total.get_metric_with_label_values(&["get"])?.inc();
+        Metrics::increment_operations("get");
 
         match val {
             Some(val) => Ok(Some(from_utf8(&val)?.to_string())),
@@ -264,8 +261,7 @@ impl DB {
                 }
             }
         }
-
-        self.metrics.operations_total.get_metric_with_label_values(&["increment_frequency"])?.inc();
+        Metrics::increment_operations("increment_frequency");
 
         Ok(())
     }
@@ -291,21 +287,20 @@ impl DB {
                     .ttl;
                 freq.remove(*byte)?;
 
-
-        self.metrics.keys_total.with_label_values(&["data"]).inc();
-        self.metrics.keys_total.with_label_values(&["meta"]).inc();
+                Metrics::dec_keys_total("data");
+                Metrics::dec_keys_total("meta");
 
                 if let Some(t) = time {
-                    self.metrics.keys_total.with_label_values(&["ttl"]).inc();
+                    Metrics::dec_keys_total("ttl");
 
                     let _ = ttl_tree.remove([&t.to_be_bytes()[..], &byte[..]].concat());
                 }
 
                 Ok(())
-            });
+        });
         l.map_err(|_| TransientError::SledTransactionError)?;
 
-        self.metrics.operations_total.get_metric_with_label_values(&["rm"])?.inc();
+       Metrics::increment_operations("rm"); 
 
         Ok(())
     }
@@ -383,7 +378,7 @@ impl DB {
 
         let zip_file = File::create(path.join(backup_name))?;
         let size = zip_file.metadata()?.len();
-        self.metrics.backup_size.set((size as f64) / 1024.0 / 1024.0);
+        Metrics::set_backup_size((size as f64) / 1024.0 / 1024.0);
 
         Ok(())
     }

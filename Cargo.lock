@@ -465,6 +465,7 @@ dependencies = [
  "axum",
  "bincode",
  "chrono",
+ "metrics",
  "metrics-exporter-prometheus",
  "prometheus",
  "serde",
