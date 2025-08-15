@@ -528,10 +528,20 @@ impl Iterator for DataIter {
     }
 }
 
+// TODO: You know where I am going with this
+struct GuardMetricChanged {
+    keys_total_changed: i64,
+    ttl_keys_total_changed: i64,
+    set_operation_total: i64,
+    rm_operation_total: i64,
+    inc_freq_operation_total: i64
+}
+
 pub struct TransactionalGuard<'a> {
     data_tree: &'a TransactionalTree,
     meta_tree: &'a TransactionalTree,
-    ttl_tree: &'a TransactionalTree
+    ttl_tree: &'a TransactionalTree,
+    changed_metric: GuardMetricChanged
 }
 
 impl<'a> TransactionalGuard<'a> {
