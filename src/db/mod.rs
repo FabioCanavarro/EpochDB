@@ -431,18 +431,22 @@ impl DB {
         }
     }
 
-    pub fn transaction<F>(&mut self, f: F)
-        where F: FnOnce(TransactionalGuard) -> ()
+    pub fn transaction<F>(&mut self, f: F) -> Result<(), TransientError>
+        where F: Fn(TransactionalGuard) -> Result<(), Box<dyn Error>>
     {
-        (&*self.data_tree, &*self.meta_tree, &*self.ttl_tree).transaction(
+        let l: Result<(), TransactionError<()>> = (&*self.data_tree, &*self.meta_tree, &*self.ttl_tree)
+            .transaction(
             |(data_tree, meta_tree, ttl_tree)| {
                 f(TransactionalGuard {
                     data_tree,
                     meta_tree,
                     ttl_tree
-                });
+                }).map_err(|_| ConflictableTransactionError::Abort(()))?;
+                Ok(())
             }
         );
+
+        l.map_err(|_| TransientError::SledTransactionError)
     }
 }
 
@@ -524,7 +528,7 @@ impl Iterator for DataIter {
     }
 }
 
-struct TransactionalGuard<'a> {
+pub struct TransactionalGuard<'a> {
     data_tree: &'a TransactionalTree,
     meta_tree: &'a TransactionalTree,
     ttl_tree: &'a TransactionalTree
