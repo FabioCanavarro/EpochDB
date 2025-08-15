@@ -8,8 +8,7 @@ use crate::{DB, Metadata, metrics::Metrics};
 use chrono::Local;
 use errors::TransientError;
 use sled::{
-    Config,
-    transaction::{ConflictableTransactionError, TransactionError, Transactional},
+    transaction::{ConflictableTransactionError, TransactionError, Transactional}, Config, Tree
 };
 use std::{
     error::Error,
@@ -431,6 +430,7 @@ impl DB {
             data: (self.data_tree.iter(), self.meta_tree.clone()),
         }
     }
+
 }
 
 impl Drop for DB {
@@ -510,3 +510,103 @@ impl Iterator for DataIter {
         Some(Ok((key, value, meta)))
     }
 }
+
+struct TransactionalGuard<'a> {
+    data_tree: &'a Tree,
+    meta_tree: &'a Tree,
+    ttl_tree: &'a Tree
+}
+
+impl TransactionalGuard {
+    pub fn set(&self, key: &str, val: &str, ttl: Option<Duration>) -> Result<(), Box<dyn Error>> {
+        let data_tree = &self.data_tree;
+        let freq_tree = &self.meta_tree;
+        let ttl_tree = &self.ttl_tree;
+        let byte = key.as_bytes();
+        let ttl_sec = match ttl {
+            Some(t) => {
+                let systime = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .expect("Cant get SystemTime");
+                Some((t + systime).as_secs())
+            }
+            None => None,
+        };
+
+        let l: Result<(), TransactionError<()>> = (&**data_tree, &**freq_tree, &**ttl_tree)
+            .transaction(|(data, freq, ttl_tree)| {
+                match freq.get(byte)? {
+                    Some(m) => {
+                        let mut meta = Metadata::from_u8(&m)
+                            .map_err(|_| ConflictableTransactionError::Abort(()))?;
+                        if let Some(t) = meta.ttl {
+                            let _ = ttl_tree.remove([&t.to_be_bytes()[..], byte].concat());
+                        }
+                        meta.ttl = ttl_sec;
+                        freq.insert(
+                            byte,
+                            meta.to_u8()
+                                .map_err(|_| ConflictableTransactionError::Abort(()))?,
+                        )?;
+                    }
+                    None => {
+                        freq.insert(
+                            byte,
+                            Metadata::new(ttl_sec)
+                                .to_u8()
+                                .map_err(|_| ConflictableTransactionError::Abort(()))?,
+                        )?;
+                    }
+                }
+
+                data.insert(byte, val.as_bytes())?;
+
+                if let Some(d) = ttl_sec {
+                    ttl_tree.insert([&d.to_be_bytes()[..], byte].concat(), byte)?;
+                    Metrics::inc_keys_total("ttl");
+                };
+
+                Ok(())
+            });
+        l.map_err(|_| TransientError::SledTransactionError)?;
+
+        // Prometheus metrics
+        Metrics::increment_operations("set");
+        Metrics::inc_keys_total("data");
+        Metrics::inc_keys_total("meta");
+
+        Ok(())
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
