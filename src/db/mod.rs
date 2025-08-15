@@ -534,6 +534,161 @@ pub struct TransactionalGuard<'a> {
     ttl_tree: &'a TransactionalTree
 }
 
+impl<'a> TransactionalGuard<'a> {
+    /// Sets a key-value pair with an optional Time-To-Live (TTL).
+    ///
+    /// If the key already exists, its value and TTL will be updated.
+    /// If `ttl` is `None`, the key will be persistent.
+    ///
+    /// # Errors
+    ///
+    /// This function can return an error if there's an issue with the underlying
+    pub fn set(&self, key: &str, val: &str, ttl: Option<Duration>) -> Result<(), Box<dyn Error>> {
+        let data_tree = &self.data_tree;
+        let freq_tree = &self.meta_tree;
+        let ttl_tree = &self.ttl_tree;
+        let byte = key.as_bytes();
+        let ttl_sec = match ttl {
+            Some(t) => {
+                let systime = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .expect("Cant get SystemTime");
+                Some((t + systime).as_secs())
+            }
+            None => None,
+        };
+
+        match data_tree.get(byte)? {
+            Some(m) => {
+                let mut meta = Metadata::from_u8(&m)?;
+                if let Some(t) = meta.ttl {
+                    let _ = ttl_tree.remove([&t.to_be_bytes()[..], byte].concat());
+                }
+                meta.ttl = ttl_sec;
+                freq_tree.insert(
+                    byte,
+                    meta.to_u8()?,
+                )?;
+            }
+            None => {
+                freq_tree.insert(
+                    byte,
+                    Metadata::new(ttl_sec)
+                        .to_u8()?
+                )?;
+            }
+        }
+
+        data_tree.insert(byte, val.as_bytes())?;
+
+        if let Some(d) = ttl_sec {
+            ttl_tree.insert([&d.to_be_bytes()[..], byte].concat(), byte)?;
+            Metrics::inc_keys_total("ttl");
+        };
+
+
+        // Prometheus metrics
+        Metrics::increment_operations("set");
+        Metrics::inc_keys_total("data");
+        Metrics::inc_keys_total("meta");
+
+        Ok(())
+    }
+
+    /// Retrieves the value for a given key.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the value cannot be retrieved from the database or if
+    /// the value is not valid UTF-8.
+    pub fn get(&self, key: &str) -> Result<Option<String>, Box<dyn Error>> {
+        let data_tree = &self.data_tree;
+        let byte = key.as_bytes();
+        let val = data_tree.get(byte)?;
+
+        Metrics::increment_operations("get");
+
+        match val {
+            Some(val) => Ok(Some(from_utf8(&val)?.to_string())),
+            None => Ok(None),
+        }
+    }
+
+    /// Atomically increments the frequency counter for a given key.
+    ///
+    /// # Errors
+    ///
+    /// This function can return an error if the key does not exist or if there
+    /// is an issue with the compare-and-swap operation.
+    pub fn increment_frequency(&self, key: &str) -> Result<(), Box<dyn Error>> {
+        let freq_tree = &self.meta_tree;
+        let byte = &key.as_bytes();
+
+        let metadata = freq_tree
+            .get(byte)?
+            .ok_or(TransientError::IncretmentError)?;
+        let meta = Metadata::from_u8(&metadata)?;
+
+        freq_tree.remove(*byte)?;
+        freq_tree.insert(
+            *byte,
+            meta.freq_incretement()
+                .to_u8()?
+        )?;
+        
+        Metrics::increment_operations("increment_frequency");
+
+        Ok(())
+    }
+
+    /// Removes a key-value pair and its associated metadata from the database.
+    ///
+    /// # Errors
+    ///
+    /// Can return an error if the transaction to remove the data fails.
+    pub fn remove(&self, key: &str) -> Result<(), Box<dyn Error>> {
+        let data_tree = &self.data_tree;
+        let freq_tree = &self.meta_tree;
+        let ttl_tree = &self.ttl_tree;
+        let byte = &key.as_bytes();
+        data_tree.remove(*byte)?;
+        let meta = freq_tree
+            .get(byte)?
+            .ok_or(TransientError::MetadataNotFound)?;
+        let time = Metadata::from_u8(&meta)?.ttl;
+        freq_tree.remove(*byte)?;
+
+        Metrics::dec_keys_total("data");
+        Metrics::dec_keys_total("meta");
+
+        if let Some(t) = time {
+            Metrics::dec_keys_total("ttl");
+
+            let _ = ttl_tree.remove([&t.to_be_bytes()[..], &byte[..]].concat());
+        }
+
+        Metrics::increment_operations("rm");
+
+        Ok(())
+    }
+
+    /// Retrieves the metadata for a given key.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the metadata cannot be retrieved or deserialized.
+    pub fn get_metadata(&self, key: &str) -> Result<Option<Metadata>, Box<dyn Error>> {
+        let freq_tree = &self.meta_tree;
+        let byte = key.as_bytes();
+        let meta = freq_tree.get(byte)?;
+        match meta {
+            Some(val) => Ok(Some(Metadata::from_u8(&val)?)),
+            None => Ok(None),
+        }
+    }
+
+}
+
 
 
 
