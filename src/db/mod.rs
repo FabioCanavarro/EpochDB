@@ -437,14 +437,16 @@ impl DB {
         let l: Result<(), TransactionError<()>> = (&*self.data_tree, &*self.meta_tree, &*self.ttl_tree)
             .transaction(
             |(data_tree, meta_tree, ttl_tree)| {
+                let mut guard_metrics = GuardMetricChanged { keys_total_changed: 0, ttl_keys_total_changed: 0, set_operation_total: 0, rm_operation_total: 0, inc_freq_operation_total: 0, get_operation_total: 0 };
                 let transaction_guard = TransactionalGuard {
                     data_tree,
                     meta_tree,
                     ttl_tree,
-                    changed_metric: GuardMetricChanged { keys_total_changed: 0, ttl_keys_total_changed: 0, set_operation_total: 0, rm_operation_total: 0, inc_freq_operation_total: 0, get_operation_total: 0 }
+                    changed_metric: &mut guard_metrics
                 };
                 f(transaction_guard).map_err(|_| ConflictableTransactionError::Abort(()))?;
 
+                guard_metrics.inc_all_metrics();
 
                 Ok(())
             }
@@ -542,11 +544,42 @@ struct GuardMetricChanged {
     get_operation_total: u64
 }
 
+impl GuardMetricChanged {
+    fn inc_all_metrics(&self) {
+        let i = self.keys_total_changed;
+
+        if i > 0 {
+            Metrics::inc_amount_keys_total("data", i.unsigned_abs());
+            Metrics::inc_amount_keys_total("meta", i.unsigned_abs());
+        }
+        else {
+            Metrics::dec_amount_keys_total("data", i.unsigned_abs());
+            Metrics::dec_amount_keys_total("meta", i.unsigned_abs());
+        }
+
+
+        let i = self.ttl_keys_total_changed;
+
+        if i > 0 {
+            Metrics::inc_amount_keys_total("ttl", i.unsigned_abs());
+        }
+        else {
+            Metrics::dec_amount_keys_total("ttl", i.unsigned_abs());
+        }
+
+        Metrics::increment_amount_operations("set", self.set_operation_total);
+        Metrics::increment_amount_operations("rm", self.rm_operation_total);
+        Metrics::increment_amount_operations("increment_frequency", self.inc_freq_operation_total);
+        Metrics::increment_amount_operations("get", self.get_operation_total);
+
+    }
+}
+
 pub struct TransactionalGuard<'a> {
     data_tree: &'a TransactionalTree,
     meta_tree: &'a TransactionalTree,
     ttl_tree: &'a TransactionalTree,
-    changed_metric: GuardMetricChanged
+    changed_metric: &'a mut GuardMetricChanged
 }
 
 impl<'a> TransactionalGuard<'a> {
@@ -709,36 +742,6 @@ impl<'a> TransactionalGuard<'a> {
             None => Ok(None),
         }
     }
-
-    fn inc_all_metrics(&self) {
-        let i = self.changed_metric.keys_total_changed;
-
-        if i > 0 {
-            Metrics::inc_amount_keys_total("data", i.unsigned_abs());
-            Metrics::inc_amount_keys_total("meta", i.unsigned_abs());
-        }
-        else {
-            Metrics::dec_amount_keys_total("data", i.unsigned_abs());
-            Metrics::dec_amount_keys_total("meta", i.unsigned_abs());
-        }
-
-
-        let i = self.changed_metric.ttl_keys_total_changed;
-
-        if i > 0 {
-            Metrics::inc_amount_keys_total("ttl", i.unsigned_abs());
-        }
-        else {
-            Metrics::dec_amount_keys_total("ttl", i.unsigned_abs());
-        }
-
-        Metrics::increment_amount_operations("set", self.changed_metric.set_operation_total);
-        Metrics::increment_amount_operations("rm", self.changed_metric.rm_operation_total);
-        Metrics::increment_amount_operations("increment_frequency", self.changed_metric.inc_freq_operation_total);
-        Metrics::increment_amount_operations("get", self.changed_metric.get_operation_total);
-
-    }
-
 }
 
 
