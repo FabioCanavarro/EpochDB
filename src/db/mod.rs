@@ -437,11 +437,15 @@ impl DB {
         let l: Result<(), TransactionError<()>> = (&*self.data_tree, &*self.meta_tree, &*self.ttl_tree)
             .transaction(
             |(data_tree, meta_tree, ttl_tree)| {
-                f(TransactionalGuard {
+                let transaction_guard = TransactionalGuard {
                     data_tree,
                     meta_tree,
-                    ttl_tree
-                }).map_err(|_| ConflictableTransactionError::Abort(()))?;
+                    ttl_tree,
+                    changed_metric: GuardMetricChanged { keys_total_changed: 0, ttl_keys_total_changed: 0, set_operation_total: 0, rm_operation_total: 0, inc_freq_operation_total: 0, get_operation_total: 0 }
+                };
+                f(transaction_guard).map_err(|_| ConflictableTransactionError::Abort(()))?;
+
+
                 Ok(())
             }
         );
@@ -704,6 +708,10 @@ impl<'a> TransactionalGuard<'a> {
             Some(val) => Ok(Some(Metadata::from_u8(&val)?)),
             None => Ok(None),
         }
+    }
+
+    fn inc_all_metrics(&self) -> () {
+        self.changed_metric.inc_freq_operation_total
     }
 
 }
