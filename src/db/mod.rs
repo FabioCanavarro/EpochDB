@@ -536,10 +536,10 @@ impl Iterator for DataIter {
 struct GuardMetricChanged {
     keys_total_changed: i64,
     ttl_keys_total_changed: i64,
-    set_operation_total: i64,
-    rm_operation_total: i64,
-    inc_freq_operation_total: i64,
-    get_operation_total: i64
+    set_operation_total: u64,
+    rm_operation_total: u64,
+    inc_freq_operation_total: u64,
+    get_operation_total: u64
 }
 
 pub struct TransactionalGuard<'a> {
@@ -710,8 +710,33 @@ impl<'a> TransactionalGuard<'a> {
         }
     }
 
-    fn inc_all_metrics(&self) -> () {
-        self.changed_metric.inc_freq_operation_total
+    fn inc_all_metrics(&self) {
+        let i = self.changed_metric.keys_total_changed;
+
+        if i > 0 {
+            Metrics::inc_amount_keys_total("data", i.unsigned_abs());
+            Metrics::inc_amount_keys_total("meta", i.unsigned_abs());
+        }
+        else {
+            Metrics::dec_amount_keys_total("data", i.unsigned_abs());
+            Metrics::dec_amount_keys_total("meta", i.unsigned_abs());
+        }
+
+
+        let i = self.changed_metric.ttl_keys_total_changed;
+
+        if i > 0 {
+            Metrics::inc_amount_keys_total("ttl", i.unsigned_abs());
+        }
+        else {
+            Metrics::dec_amount_keys_total("ttl", i.unsigned_abs());
+        }
+
+        Metrics::increment_amount_operations("set", self.changed_metric.set_operation_total);
+        Metrics::increment_amount_operations("rm", self.changed_metric.rm_operation_total);
+        Metrics::increment_amount_operations("increment_frequency", self.changed_metric.inc_freq_operation_total);
+        Metrics::increment_amount_operations("get", self.changed_metric.get_operation_total);
+
     }
 
 }

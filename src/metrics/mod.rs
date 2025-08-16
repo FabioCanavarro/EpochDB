@@ -42,6 +42,11 @@ impl Metrics {
     }
 
     /// Sets the current number of keys for a given tree.
+    pub fn inc_amount_keys_total(tree: &str, value: u64) {
+        gauge!("epochdb_keys_total", "tree" => tree.to_string()).set(value as f64);
+    }
+
+    /// Sets the current number of keys for a given tree.
     pub fn dec_amount_keys_total(tree: &str, amount: u64) {
         gauge!("epochdb_keys_total", "tree" => tree.to_string()).decrement(amount as f64);
     }
