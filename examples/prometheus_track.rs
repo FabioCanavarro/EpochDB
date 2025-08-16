@@ -1,4 +1,4 @@
-use axum::{Router, extract::State, routing::get};
+use axum::{extract::State, routing::get, Router};
 use epoch_db::DB;
 use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle};
 use std::{

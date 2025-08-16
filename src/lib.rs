@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use sled::Tree;
 use std::{
     path::PathBuf,
-    sync::{Arc, atomic::AtomicBool},
+    sync::{atomic::AtomicBool, Arc},
     thread::JoinHandle,
 };
 
