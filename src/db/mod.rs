@@ -534,7 +534,8 @@ struct GuardMetricChanged {
     ttl_keys_total_changed: i64,
     set_operation_total: i64,
     rm_operation_total: i64,
-    inc_freq_operation_total: i64
+    inc_freq_operation_total: i64,
+    get_operation_total: i64
 }
 
 pub struct TransactionalGuard<'a> {
@@ -553,7 +554,7 @@ impl<'a> TransactionalGuard<'a> {
     /// # Errors
     ///
     /// This function can return an error if there's an issue with the underlying
-    pub fn set(&self, key: &str, val: &str, ttl: Option<Duration>) -> Result<(), Box<dyn Error>> {
+    pub fn set(&mut self, key: &str, val: &str, ttl: Option<Duration>) -> Result<(), Box<dyn Error>> {
         let data_tree = &self.data_tree;
         let freq_tree = &self.meta_tree;
         let ttl_tree = &self.ttl_tree;
@@ -593,14 +594,17 @@ impl<'a> TransactionalGuard<'a> {
 
         if let Some(d) = ttl_sec {
             ttl_tree.insert([&d.to_be_bytes()[..], byte].concat(), byte)?;
-            Metrics::inc_keys_total("ttl");
+            //Metrics::inc_keys_total("ttl");
+            self.changed_metric.ttl_keys_total_changed +=1;
         };
 
 
         // Prometheus metrics
-        Metrics::increment_operations("set");
-        Metrics::inc_keys_total("data");
-        Metrics::inc_keys_total("meta");
+        //Metrics::increment_operations("set");
+        //Metrics::inc_keys_total("data");
+        //Metrics::inc_keys_total("meta");
+        self.changed_metric.keys_total_changed += 1;
+        self.changed_metric.set_operation_total +=1;
 
         Ok(())
     }
@@ -611,12 +615,13 @@ impl<'a> TransactionalGuard<'a> {
     ///
     /// Returns an error if the value cannot be retrieved from the database or if
     /// the value is not valid UTF-8.
-    pub fn get(&self, key: &str) -> Result<Option<String>, Box<dyn Error>> {
+    pub fn get(&mut self, key: &str) -> Result<Option<String>, Box<dyn Error>> {
         let data_tree = &self.data_tree;
         let byte = key.as_bytes();
         let val = data_tree.get(byte)?;
 
-        Metrics::increment_operations("get");
+        // Metrics::increment_operations("get");
+        self.changed_metric.get_operation_total +=1;
 
         match val {
             Some(val) => Ok(Some(from_utf8(&val)?.to_string())),
@@ -630,7 +635,7 @@ impl<'a> TransactionalGuard<'a> {
     ///
     /// This function can return an error if the key does not exist or if there
     /// is an issue with the compare-and-swap operation.
-    pub fn increment_frequency(&self, key: &str) -> Result<(), Box<dyn Error>> {
+    pub fn increment_frequency(&mut self, key: &str) -> Result<(), Box<dyn Error>> {
         let freq_tree = &self.meta_tree;
         let byte = &key.as_bytes();
 
@@ -646,7 +651,8 @@ impl<'a> TransactionalGuard<'a> {
                 .to_u8()?
         )?;
         
-        Metrics::increment_operations("increment_frequency");
+        // Metrics::increment_operations("increment_frequency");
+        self.changed_metric.inc_freq_operation_total +=1;
 
         Ok(())
     }
@@ -656,7 +662,7 @@ impl<'a> TransactionalGuard<'a> {
     /// # Errors
     ///
     /// Can return an error if the transaction to remove the data fails.
-    pub fn remove(&self, key: &str) -> Result<(), Box<dyn Error>> {
+    pub fn remove(&mut self, key: &str) -> Result<(), Box<dyn Error>> {
         let data_tree = &self.data_tree;
         let freq_tree = &self.meta_tree;
         let ttl_tree = &self.ttl_tree;
@@ -668,16 +674,19 @@ impl<'a> TransactionalGuard<'a> {
         let time = Metadata::from_u8(&meta)?.ttl;
         freq_tree.remove(*byte)?;
 
-        Metrics::dec_keys_total("data");
-        Metrics::dec_keys_total("meta");
+        //Metrics::dec_keys_total("data");
+        //Metrics::dec_keys_total("meta");
+        self.changed_metric.keys_total_changed -= 1;
 
         if let Some(t) = time {
-            Metrics::dec_keys_total("ttl");
+            // Metrics::dec_keys_total("ttl");
+            self.changed_metric.ttl_keys_total_changed -= 1;
 
             let _ = ttl_tree.remove([&t.to_be_bytes()[..], &byte[..]].concat());
         }
 
-        Metrics::increment_operations("rm");
+        // Metrics::increment_operations("rm");
+        self.changed_metric.rm_operation_total += 1;
 
         Ok(())
     }
