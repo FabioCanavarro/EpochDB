@@ -25,6 +25,7 @@ pub enum TransientError {
     FileNameDoesntExist,
     MetadataNotFound,
     DBMetadataNotFound,
+    PoisonedMutex
 }
 
 impl Display for TransientError {
@@ -44,6 +45,7 @@ impl Display for TransientError {
             TransientError::FileNameDoesntExist => writeln!(f, "File name doesnt exist"),
             TransientError::MetadataNotFound => writeln!(f, "Metadata is not found"),
             TransientError::DBMetadataNotFound => writeln!(f, "DB metadata is not found"),
+            TransientError::PoisonedMutex => writeln!(f, "Mutex is poisoned")
         }
     }
 }

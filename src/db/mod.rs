@@ -19,7 +19,7 @@ use std::{
     io::{ErrorKind, Read, Write},
     path::Path,
     str::from_utf8,
-    sync::{atomic::AtomicBool, Arc},
+    sync::{atomic::AtomicBool, Arc, Mutex},
     thread::{self, JoinHandle},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
@@ -438,10 +438,21 @@ impl DB {
     where
         F: Fn(TransactionalGuard) -> Result<(), Box<dyn Error>>,
     {
+        
+        let guard_metrics = Arc::new(Mutex::new(GuardMetricChanged {
+            keys_total_changed: 0,
+            ttl_keys_total_changed: 0,
+            set_operation_total: 0,
+            rm_operation_total: 0,
+            inc_freq_operation_total: 0,
+            get_operation_total: 0,
+        }));
+
+
         let l: Result<(), TransactionError<()>> =
             (&*self.data_tree, &*self.meta_tree, &*self.ttl_tree).transaction(
                 |(data_tree, meta_tree, ttl_tree)| {
-                    let mut guard_metrics = GuardMetricChanged {
+                    *guard_metrics.lock().map_err(|_| ConflictableTransactionError::Abort(()))? = GuardMetricChanged {
                         keys_total_changed: 0,
                         ttl_keys_total_changed: 0,
                         set_operation_total: 0,
@@ -453,17 +464,18 @@ impl DB {
                         data_tree,
                         meta_tree,
                         ttl_tree,
-                        changed_metric: &mut guard_metrics,
+                        changed_metric: guard_metrics.clone(),
                     };
                     f(transaction_guard).map_err(|_| ConflictableTransactionError::Abort(()))?;
-
-                    guard_metrics.inc_all_metrics();
 
                     Ok(())
                 },
             );
 
-        l.map_err(|_| TransientError::SledTransactionError)
+        l.map_err(|_| TransientError::SledTransactionError)?;
+
+        guard_metrics.lock().map_err(|_| TransientError::PoisonedMutex)?.inc_all_metrics();
+        Ok(())
     }
 }
 
@@ -585,7 +597,7 @@ pub struct TransactionalGuard<'a> {
     data_tree: &'a TransactionalTree,
     meta_tree: &'a TransactionalTree,
     ttl_tree: &'a TransactionalTree,
-    changed_metric: &'a mut GuardMetricChanged,
+    changed_metric: Arc<Mutex<GuardMetricChanged>>,
 }
 
 impl<'a> TransactionalGuard<'a> {
@@ -602,7 +614,7 @@ impl<'a> TransactionalGuard<'a> {
         key: &str,
         val: &str,
         ttl: Option<Duration>,
-    ) -> Result<(), Box<dyn Error>> {
+    ) -> Result<(), Box<dyn Error + '_>> {
         let data_tree = &self.data_tree;
         let freq_tree = &self.meta_tree;
         let ttl_tree = &self.ttl_tree;
@@ -636,15 +648,15 @@ impl<'a> TransactionalGuard<'a> {
         if let Some(d) = ttl_sec {
             ttl_tree.insert([&d.to_be_bytes()[..], byte].concat(), byte)?;
             //Metrics::inc_keys_total("ttl");
-            self.changed_metric.ttl_keys_total_changed += 1;
+            self.changed_metric.lock()?.ttl_keys_total_changed += 1;
         };
 
         // Prometheus metrics
         //Metrics::increment_operations("set");
         //Metrics::inc_keys_total("data");
         //Metrics::inc_keys_total("meta");
-        self.changed_metric.keys_total_changed += 1;
-        self.changed_metric.set_operation_total += 1;
+        self.changed_metric.lock()?.keys_total_changed += 1;
+        self.changed_metric.lock()?.set_operation_total += 1;
 
         Ok(())
     }
@@ -655,13 +667,13 @@ impl<'a> TransactionalGuard<'a> {
     ///
     /// Returns an error if the value cannot be retrieved from the database or if
     /// the value is not valid UTF-8.
-    pub fn get(&mut self, key: &str) -> Result<Option<String>, Box<dyn Error>> {
+    pub fn get(&mut self, key: &str) -> Result<Option<String>, Box<dyn Error + '_>> {
         let data_tree = &self.data_tree;
         let byte = key.as_bytes();
         let val = data_tree.get(byte)?;
 
         // Metrics::increment_operations("get");
-        self.changed_metric.get_operation_total += 1;
+        self.changed_metric.lock()?.get_operation_total += 1;
 
         match val {
             Some(val) => Ok(Some(from_utf8(&val)?.to_string())),
@@ -675,7 +687,7 @@ impl<'a> TransactionalGuard<'a> {
     ///
     /// This function can return an error if the key does not exist or if there
     /// is an issue with the compare-and-swap operation.
-    pub fn increment_frequency(&mut self, key: &str) -> Result<(), Box<dyn Error>> {
+    pub fn increment_frequency(&mut self, key: &str) -> Result<(), Box<dyn Error + '_>> {
         let freq_tree = &self.meta_tree;
         let byte = &key.as_bytes();
 
@@ -688,7 +700,7 @@ impl<'a> TransactionalGuard<'a> {
         freq_tree.insert(*byte, meta.freq_incretement().to_u8()?)?;
 
         // Metrics::increment_operations("increment_frequency");
-        self.changed_metric.inc_freq_operation_total += 1;
+        self.changed_metric.lock()?.inc_freq_operation_total += 1;
 
         Ok(())
     }
@@ -698,7 +710,7 @@ impl<'a> TransactionalGuard<'a> {
     /// # Errors
     ///
     /// Can return an error if the transaction to remove the data fails.
-    pub fn remove(&mut self, key: &str) -> Result<(), Box<dyn Error>> {
+    pub fn remove(&mut self, key: &str) -> Result<(), Box<dyn Error + '_>> {
         let data_tree = &self.data_tree;
         let freq_tree = &self.meta_tree;
         let ttl_tree = &self.ttl_tree;
@@ -712,17 +724,17 @@ impl<'a> TransactionalGuard<'a> {
 
         //Metrics::dec_keys_total("data");
         //Metrics::dec_keys_total("meta");
-        self.changed_metric.keys_total_changed -= 1;
+        self.changed_metric.lock()?.keys_total_changed -= 1;
 
         if let Some(t) = time {
             // Metrics::dec_keys_total("ttl");
-            self.changed_metric.ttl_keys_total_changed -= 1;
+            self.changed_metric.lock()?.ttl_keys_total_changed -= 1;
 
             let _ = ttl_tree.remove([&t.to_be_bytes()[..], &byte[..]].concat());
         }
 
         // Metrics::increment_operations("rm");
-        self.changed_metric.rm_operation_total += 1;
+        self.changed_metric.lock()?.rm_operation_total += 1;
 
         Ok(())
     }
