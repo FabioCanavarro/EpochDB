@@ -42,9 +42,18 @@ impl DB {
             .open()
             .map_err(|e| TransientError::SledError { error: e })?;
 
-        let data_tree = Arc::new(db.open_tree("data_tree").map_err(|e| TransientError::SledError { error: e })?);
-        let meta_tree = Arc::new(db.open_tree("freq_tree").map_err(|e| TransientError::SledError { error: e })?);
-        let ttl_tree = Arc::new(db.open_tree("ttl_tree").map_err(|e| TransientError::SledError { error: e })?);
+        let data_tree = Arc::new(
+            db.open_tree("data_tree")
+                .map_err(|e| TransientError::SledError { error: e })?,
+        );
+        let meta_tree = Arc::new(
+            db.open_tree("freq_tree")
+                .map_err(|e| TransientError::SledError { error: e })?,
+        );
+        let ttl_tree = Arc::new(
+            db.open_tree("ttl_tree")
+                .map_err(|e| TransientError::SledError { error: e })?,
+        );
 
         let ttl_tree_clone = Arc::clone(&ttl_tree);
         let meta_tree_clone = Arc::clone(&meta_tree);
@@ -224,12 +233,18 @@ impl DB {
     pub fn get(&self, key: &str) -> Result<Option<String>, TransientError> {
         let data_tree = &self.data_tree;
         let byte = key.as_bytes();
-        let val = data_tree.get(byte).map_err(|e| TransientError::SledError { error: e })?;
+        let val = data_tree
+            .get(byte)
+            .map_err(|e| TransientError::SledError { error: e })?;
 
         Metrics::increment_operations("get");
 
         match val {
-            Some(val) => Ok(Some(from_utf8(&val).map_err(|_| TransientError::ParsingToUTF8Error)?.to_string())),
+            Some(val) => Ok(Some(
+                from_utf8(&val)
+                    .map_err(|_| TransientError::ParsingToUTF8Error)?
+                    .to_string(),
+            )),
             None => Ok(None),
         }
     }
@@ -249,16 +264,15 @@ impl DB {
                 .get(byte)
                 .map_err(|e| TransientError::SledError { error: e })?
                 .ok_or(TransientError::IncretmentError)?;
-            let meta = Metadata::from_u8(&metadata)
-                .map_err(|_| TransientError::ParsingFromByteError)?;
+            let meta =
+                Metadata::from_u8(&metadata).map_err(|_| TransientError::ParsingFromByteError)?;
             let s = freq_tree.compare_and_swap(
                 byte,
                 Some(metadata),
                 Some(
-                    meta
-                        .freq_incretement()
+                    meta.freq_incretement()
                         .to_u8()
-                        .map_err(|_| TransientError::ParsingToByteError)?
+                        .map_err(|_| TransientError::ParsingToByteError)?,
                 ),
             );
             if let Ok(ss) = s &&
@@ -318,17 +332,27 @@ impl DB {
     pub fn get_metadata(&self, key: &str) -> Result<Option<Metadata>, TransientError> {
         let freq_tree = &self.meta_tree;
         let byte = key.as_bytes();
-        let meta = freq_tree.get(byte).map_err(|e| TransientError::SledError { error: e })?;
+        let meta = freq_tree
+            .get(byte)
+            .map_err(|e| TransientError::SledError { error: e })?;
         match meta {
-            Some(val) => Ok(Some(Metadata::from_u8(&val).map_err(|_| TransientError::ParsingFromByteError)?)),
+            Some(val) => Ok(Some(
+                Metadata::from_u8(&val).map_err(|_| TransientError::ParsingFromByteError)?,
+            )),
             None => Ok(None),
         }
     }
 
     pub fn flush(&self) -> Result<(), TransientError> {
-        self.data_tree.flush().map_err(|e| TransientError::SledError { error: e })?;
-        self.meta_tree.flush().map_err(|e| TransientError::SledError { error: e })?;
-        self.ttl_tree.flush().map_err(|e| TransientError::SledError { error: e })?;
+        self.data_tree
+            .flush()
+            .map_err(|e| TransientError::SledError { error: e })?;
+        self.meta_tree
+            .flush()
+            .map_err(|e| TransientError::SledError { error: e })?;
+        self.ttl_tree
+            .flush()
+            .map_err(|e| TransientError::SledError { error: e })?;
 
         Ok(())
     }
@@ -347,11 +371,15 @@ impl DB {
 
         let backup_name = format!("backup-{}.zip", Local::now().format("%Y-%m-%d_%H-%M-%S"));
 
-        let zip_file = File::create(path.join(&backup_name)).map_err(|_| TransientError::FolderNotFound { path: path.to_path_buf() })?;
+        let zip_file =
+            File::create(path.join(&backup_name)).map_err(|_| TransientError::FolderNotFound {
+                path: path.to_path_buf(),
+            })?;
 
         let mut zipw = ZipWriter::new(zip_file);
 
-        zipw.start_file("data.epoch", options).map_err(|e| TransientError::ZipError { error: e })?;
+        zipw.start_file("data.epoch", options)
+            .map_err(|e| TransientError::ZipError { error: e })?;
         for i in self.data_tree.iter() {
             let iu = i.map_err(|e| TransientError::SledError { error: e })?;
 
@@ -365,22 +393,44 @@ impl DB {
 
             // NOTE: A usize is diffrent on diffrent machines
             // and a usize will never exceed a u64 in lenght on paper lol
-            let kl: u64 = key.len().try_into().map_err(|_| TransientError::ParsingToU64ByteFailed)?;
-            let vl: u64 = value.len().try_into().map_err(|_| TransientError::ParsingToU64ByteFailed)?;
-            let ml: u64 = meta.len().try_into().map_err(|_| TransientError::ParsingToU64ByteFailed)?;
+            let kl: u64 = key
+                .len()
+                .try_into()
+                .map_err(|_| TransientError::ParsingToU64ByteFailed)?;
+            let vl: u64 = value
+                .len()
+                .try_into()
+                .map_err(|_| TransientError::ParsingToU64ByteFailed)?;
+            let ml: u64 = meta
+                .len()
+                .try_into()
+                .map_err(|_| TransientError::ParsingToU64ByteFailed)?;
 
-            zipw.write_all(&kl.to_be_bytes()).map_err(|e| TransientError::IOError { error: e })?;
-            zipw.write_all(key).map_err(|e| TransientError::IOError { error: e })?;
-            zipw.write_all(&vl.to_be_bytes()).map_err(|e| TransientError::IOError { error: e })?;
-            zipw.write_all(value).map_err(|e| TransientError::IOError { error: e })?;
-            zipw.write_all(&ml.to_be_bytes()).map_err(|e| TransientError::IOError { error: e })?;
-            zipw.write_all(&meta).map_err(|e| TransientError::IOError { error: e })?;
+            zipw.write_all(&kl.to_be_bytes())
+                .map_err(|e| TransientError::IOError { error: e })?;
+            zipw.write_all(key)
+                .map_err(|e| TransientError::IOError { error: e })?;
+            zipw.write_all(&vl.to_be_bytes())
+                .map_err(|e| TransientError::IOError { error: e })?;
+            zipw.write_all(value)
+                .map_err(|e| TransientError::IOError { error: e })?;
+            zipw.write_all(&ml.to_be_bytes())
+                .map_err(|e| TransientError::IOError { error: e })?;
+            zipw.write_all(&meta)
+                .map_err(|e| TransientError::IOError { error: e })?;
         }
 
-        zipw.finish().map_err(|e| TransientError::ZipError { error: e })?;
+        zipw.finish()
+            .map_err(|e| TransientError::ZipError { error: e })?;
 
-        let zip_file = File::open(path.join(backup_name)).map_err(|_| TransientError::FolderNotFound { path: path.to_path_buf() })?;
-        let size = zip_file.metadata().map_err(|e| TransientError::IOError { error: e })?.len();
+        let zip_file =
+            File::open(path.join(backup_name)).map_err(|_| TransientError::FolderNotFound {
+                path: path.to_path_buf(),
+            })?;
+        let size = zip_file
+            .metadata()
+            .map_err(|e| TransientError::IOError { error: e })?
+            .len();
         Metrics::set_backup_size((size as f64) / 1024.0 / 1024.0);
 
         Ok(())
@@ -396,13 +446,18 @@ impl DB {
 
         let db = DB::new(db_path)?;
 
-        let file = File::open(path).map_err(|_| TransientError::FolderNotFound { path: path.to_path_buf() })?;
+        let file = File::open(path).map_err(|_| TransientError::FolderNotFound {
+            path: path.to_path_buf(),
+        })?;
 
-        let mut archive = ZipArchive::new(file).map_err(|e| TransientError::ZipError { error: e })?;
+        let mut archive =
+            ZipArchive::new(file).map_err(|e| TransientError::ZipError { error: e })?;
 
         // The error is not only is the archive is not found but also a few other errors, so it is
         // prefered to not laced it with  a full on TransientError but a wrapper
-        let mut data = archive.by_name("data.epoch").map_err(|e| TransientError::ZipError { error: e })?;
+        let mut data = archive
+            .by_name("data.epoch")
+            .map_err(|e| TransientError::ZipError { error: e })?;
         loop {
             let mut len: [u8; 8] = [0u8; 8];
             if let Err(e) = data.read_exact(&mut len) &&
@@ -410,31 +465,61 @@ impl DB {
                     break;
             }
 
-            let mut key = vec![0; u64::from_be_bytes(len).try_into().map_err(|_| TransientError::ParsingToU64ByteFailed)?];
+            let mut key = vec![
+                0;
+                u64::from_be_bytes(len)
+                    .try_into()
+                    .map_err(|_| TransientError::ParsingToU64ByteFailed)?
+            ];
 
             // Since it contains both error, I figure that It would be better If I map it to a
             // Transient Wrap of std::io::Error
-            data.read_exact(&mut key).map_err(|e| TransientError::IOError { error: e })?;
+            data.read_exact(&mut key)
+                .map_err(|e| TransientError::IOError { error: e })?;
 
-            data.read_exact(&mut len).map_err(|e| TransientError::IOError { error: e })?;
+            data.read_exact(&mut len)
+                .map_err(|e| TransientError::IOError { error: e })?;
 
-            let mut val = vec![0; u64::from_be_bytes(len).try_into().map_err(|_| TransientError::ParsingToU64ByteFailed)?];
-            data.read_exact(&mut val).map_err(|e| TransientError::IOError { error: e })?;
+            let mut val = vec![
+                0;
+                u64::from_be_bytes(len)
+                    .try_into()
+                    .map_err(|_| TransientError::ParsingToU64ByteFailed)?
+            ];
+            data.read_exact(&mut val)
+                .map_err(|e| TransientError::IOError { error: e })?;
 
-            data.read_exact(&mut len).map_err(|e| TransientError::IOError { error: e })?;
+            data.read_exact(&mut len)
+                .map_err(|e| TransientError::IOError { error: e })?;
 
-            let mut meta_byte = vec![0; u64::from_be_bytes(len).try_into().map_err(|_| TransientError::ParsingToU64ByteFailed)?];
-            data.read_exact(&mut meta_byte).map_err(|e| TransientError::IOError { error: e })?;
+            let mut meta_byte = vec![
+                0;
+                u64::from_be_bytes(len)
+                    .try_into()
+                    .map_err(|_| TransientError::ParsingToU64ByteFailed)?
+            ];
+            data.read_exact(&mut meta_byte)
+                .map_err(|e| TransientError::IOError { error: e })?;
 
-            let meta = Metadata::from_u8(&meta_byte).map_err(|_| TransientError::ParsingFromByteError)?;
+            let meta =
+                Metadata::from_u8(&meta_byte).map_err(|_| TransientError::ParsingFromByteError)?;
 
-            db.meta_tree.insert(&key, meta.to_u8().map_err(|_| TransientError::ParsingToByteError)?).map_err(|e| TransientError::SledError { error: e })?;
+            db.meta_tree
+                .insert(
+                    &key,
+                    meta.to_u8()
+                        .map_err(|_| TransientError::ParsingToByteError)?,
+                )
+                .map_err(|e| TransientError::SledError { error: e })?;
 
-            db.data_tree.insert(&key, val).map_err(|e| TransientError::SledError { error: e })?;
+            db.data_tree
+                .insert(&key, val)
+                .map_err(|e| TransientError::SledError { error: e })?;
 
             if let Some(d) = meta.ttl {
                 db.ttl_tree
-                    .insert([&d.to_be_bytes()[..], &key].concat(), key).map_err(|e| TransientError::SledError { error: e })?;
+                    .insert([&d.to_be_bytes()[..], &key].concat(), key)
+                    .map_err(|e| TransientError::SledError { error: e })?;
             };
         }
 
@@ -451,7 +536,6 @@ impl DB {
     where
         F: Fn(TransactionalGuard) -> Result<(), Box<dyn Error>>,
     {
-        
         let guard_metrics = Arc::new(Mutex::new(GuardMetricChanged {
             keys_total_changed: 0,
             ttl_keys_total_changed: 0,
@@ -461,18 +545,20 @@ impl DB {
             get_operation_total: 0,
         }));
 
-
         let l: Result<(), TransactionError<()>> =
             (&*self.data_tree, &*self.meta_tree, &*self.ttl_tree).transaction(
                 |(data_tree, meta_tree, ttl_tree)| {
-                    *guard_metrics.lock().map_err(|_| ConflictableTransactionError::Abort(()))? = GuardMetricChanged {
-                        keys_total_changed: 0,
-                        ttl_keys_total_changed: 0,
-                        set_operation_total: 0,
-                        rm_operation_total: 0,
-                        inc_freq_operation_total: 0,
-                        get_operation_total: 0,
-                    };
+                    *guard_metrics
+                        .lock()
+                        .map_err(|_| ConflictableTransactionError::Abort(()))? =
+                        GuardMetricChanged {
+                            keys_total_changed: 0,
+                            ttl_keys_total_changed: 0,
+                            set_operation_total: 0,
+                            rm_operation_total: 0,
+                            inc_freq_operation_total: 0,
+                            get_operation_total: 0,
+                        };
                     let transaction_guard = TransactionalGuard {
                         data_tree,
                         meta_tree,
@@ -487,7 +573,10 @@ impl DB {
 
         l.map_err(|_| TransientError::SledTransactionError)?;
 
-        guard_metrics.lock().map_err(|_| TransientError::PoisonedMutex)?.inc_all_metrics();
+        guard_metrics
+            .lock()
+            .map_err(|_| TransientError::PoisonedMutex)?
+            .inc_all_metrics();
         Ok(())
     }
 }

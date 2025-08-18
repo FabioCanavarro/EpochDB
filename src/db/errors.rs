@@ -24,7 +24,7 @@ pub enum TransientError {
         path: PathBuf,
     },
     ZipError {
-        error: zip::result::ZipError
+        error: zip::result::ZipError,
     },
     FileNameDoesntExist,
     MetadataNotFound,
@@ -32,8 +32,8 @@ pub enum TransientError {
     PoisonedMutex,
     ParsingFromByteError,
     IOError {
-        error: std::io::Error
-    }
+        error: std::io::Error,
+    },
 }
 
 impl Display for TransientError {
@@ -46,17 +46,17 @@ impl Display for TransientError {
             TransientError::SledTransactionError => writeln!(f, "Sled Transaction failed"),
             TransientError::ParsingToU64ByteFailed => {
                 writeln!(f, "Failed to parse a variable to a U64 byte [u8; 8]")
-            },
+            }
             TransientError::FolderNotFound { path } => {
                 writeln!(f, "Folder is not found at the path: {path:#?}")
-            },
-            TransientError::ZipError {error} => writeln!(f, "Zip crate failed {error}"),
+            }
+            TransientError::ZipError { error } => writeln!(f, "Zip crate failed {error}"),
             TransientError::FileNameDoesntExist => writeln!(f, "File name doesnt exist"),
             TransientError::MetadataNotFound => writeln!(f, "Metadata is not found"),
             TransientError::DBMetadataNotFound => writeln!(f, "DB metadata is not found"),
             TransientError::PoisonedMutex => writeln!(f, "Mutex is poisoned"),
             TransientError::ParsingFromByteError => writeln!(f, "Partsing from byte failed"),
-            TransientError::IOError {error} => writeln!(f, "std IO failed {error}")
+            TransientError::IOError { error } => writeln!(f, "std IO failed {error}"),
         }
     }
 }
