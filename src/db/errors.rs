@@ -1,7 +1,8 @@
-//! This module defines the custom error types used throughout the TransientDB library.
+//! This module defines the custom error types used throughout the EpochDB library.
 use std::{error::Error, fmt::Display, path::PathBuf};
 
-/// The primary error enum for the TransientDB library.
+/// The primary error enum for the EpochDB library.
+/// Fun Fact: It's called TransientError because Transient is the old name of the DB
 #[derive(Debug)]
 pub enum TransientError {
     /// Error that occurs during frequency increment operations.
