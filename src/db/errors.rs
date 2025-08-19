@@ -1,6 +1,8 @@
 //! This module defines the custom error types used throughout the EpochDB library.
 use std::{error::Error, fmt::Display, path::PathBuf};
 
+use sled::transaction::UnabortableTransactionError;
+
 /// The primary error enum for the EpochDB library.
 /// Fun Fact: It's called TransientError because Transient is the old name of the DB
 #[derive(Debug)]
@@ -34,6 +36,7 @@ pub enum TransientError {
     IOError {
         error: std::io::Error,
     },
+    SledUnabortableTransactionError { error: UnabortableTransactionError}
 }
 
 impl Display for TransientError {
@@ -57,6 +60,7 @@ impl Display for TransientError {
             TransientError::PoisonedMutex => writeln!(f, "Mutex is poisoned"),
             TransientError::ParsingFromByteError => writeln!(f, "Partsing from byte failed"),
             TransientError::IOError { error } => writeln!(f, "std IO failed {error}"),
+            TransientError::SledUnabortableTransactionError { error } => writeln!(f, "Sled")
         }
     }
 }

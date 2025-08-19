@@ -686,7 +686,9 @@ pub struct TransactionalGuard<'a> {
     changed_metric: &'a mut GuardMetricChanged,
 }
 
-// TODO: Add the good error handling for the guard also
+// NOTE: The reason why I didn't convert everything to Transient error is because of the
+// UnabortableTransactionError enum, where is error, they will reset,
+// If I fuck with this who knows what will be destroyed TT
 impl<'a> TransactionalGuard<'a> {
     /// Sets a key-value pair with an optional Time-To-Live (TTL).
     ///
@@ -701,7 +703,7 @@ impl<'a> TransactionalGuard<'a> {
         key: &str,
         val: &str,
         ttl: Option<Duration>,
-    ) -> Result<(), TransientError> {
+    ) -> Result<(), Box<dyn Error>> {
         let data_tree = &self.data_tree;
         let freq_tree = &self.meta_tree;
         let ttl_tree = &self.ttl_tree;
@@ -730,6 +732,7 @@ impl<'a> TransactionalGuard<'a> {
             }
         }
 
+
         data_tree.insert(byte, val.as_bytes())?;
 
         if let Some(d) = ttl_sec {
@@ -754,7 +757,7 @@ impl<'a> TransactionalGuard<'a> {
     ///
     /// Returns an error if the value cannot be retrieved from the database or if
     /// the value is not valid UTF-8.
-    pub fn get(&mut self, key: &str) -> Result<Option<String>, TransientError> {
+    pub fn get(&mut self, key: &str) -> Result<Option<String>, Box<dyn Error>> {
         let data_tree = &self.data_tree;
         let byte = key.as_bytes();
         let val = data_tree.get(byte)?;
@@ -774,7 +777,7 @@ impl<'a> TransactionalGuard<'a> {
     ///
     /// This function can return an error if the key does not exist or if there
     /// is an issue with the compare-and-swap operation.
-    pub fn increment_frequency(&mut self, key: &str) -> Result<(), TransientError> {
+    pub fn increment_frequency(&mut self, key: &str) -> Result<(), Box<dyn Error>> {
         let freq_tree = &self.meta_tree;
         let byte = &key.as_bytes();
 
@@ -797,7 +800,7 @@ impl<'a> TransactionalGuard<'a> {
     /// # Errors
     ///
     /// Can return an error if the transaction to remove the data fails.
-    pub fn remove(&mut self, key: &str) -> Result<(), TransientError> {
+    pub fn remove(&mut self, key: &str) -> Result<(), Box<dyn Error>> {
         let data_tree = &self.data_tree;
         let freq_tree = &self.meta_tree;
         let ttl_tree = &self.ttl_tree;
@@ -831,7 +834,7 @@ impl<'a> TransactionalGuard<'a> {
     /// # Errors
     ///
     /// Returns an error if the metadata cannot be retrieved or deserialized.
-    pub fn get_metadata(&self, key: &str) -> Result<Option<Metadata>, TransientError> {
+    pub fn get_metadata(&self, key: &str) -> Result<Option<Metadata>, Box<dyn Error>> {
         let freq_tree = &self.meta_tree;
         let byte = key.as_bytes();
         let meta = freq_tree.get(byte)?;
