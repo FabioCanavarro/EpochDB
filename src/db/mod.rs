@@ -4,14 +4,14 @@
 
 pub mod errors;
 
-use crate::{metrics::Metrics, Metadata, DB};
+use crate::{DB, Metadata, metrics::Metrics};
 use chrono::Local;
 use errors::TransientError;
 use sled::{
+    Config,
     transaction::{
         ConflictableTransactionError, TransactionError, Transactional, TransactionalTree,
     },
-    Config,
 };
 use std::{
     error::Error,
@@ -19,11 +19,11 @@ use std::{
     io::{ErrorKind, Read, Write},
     path::Path,
     str::from_utf8,
-    sync::{atomic::AtomicBool, Arc},
+    sync::{Arc, atomic::AtomicBool},
     thread::{self, JoinHandle},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
-use zip::{write::SimpleFileOptions, ZipArchive, ZipWriter};
+use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
 impl DB {
     /// Creates a new `DB` instance or opens an existing one at the specified path.
@@ -275,9 +275,10 @@ impl DB {
                         .map_err(|_| TransientError::ParsingToByteError)?,
                 ),
             );
-            if let Ok(ss) = s &&
-                ss.is_ok() {
-                    break;
+            if let Ok(ss) = s
+                && ss.is_ok()
+            {
+                break;
             }
         }
         Metrics::increment_operations("increment_frequency");
@@ -460,9 +461,10 @@ impl DB {
             .map_err(|e| TransientError::ZipError { error: e })?;
         loop {
             let mut len: [u8; 8] = [0u8; 8];
-            if let Err(e) = data.read_exact(&mut len) &&
-                let ErrorKind::UnexpectedEof = e.kind() {
-                    break;
+            if let Err(e) = data.read_exact(&mut len)
+                && let ErrorKind::UnexpectedEof = e.kind()
+            {
+                break;
             }
 
             let mut key = vec![
@@ -536,31 +538,32 @@ impl DB {
     where
         F: Fn(&mut TransactionalGuard) -> Result<(), Box<dyn Error>>,
     {
-            let l: Result<GuardMetricChanged, TransactionError<()>> =
+        let l: Result<GuardMetricChanged, TransactionError<()>> =
             (&*self.data_tree, &*self.meta_tree, &*self.ttl_tree).transaction(
                 |(data_tree, meta_tree, ttl_tree)| {
-                    let mut guard_metrics = 
-                        GuardMetricChanged {
-                            keys_total_changed: 0,
-                            ttl_keys_total_changed: 0,
-                            set_operation_total: 0,
-                            rm_operation_total: 0,
-                            inc_freq_operation_total: 0,
-                            get_operation_total: 0,
-                        };
+                    let mut guard_metrics = GuardMetricChanged {
+                        keys_total_changed: 0,
+                        ttl_keys_total_changed: 0,
+                        set_operation_total: 0,
+                        rm_operation_total: 0,
+                        inc_freq_operation_total: 0,
+                        get_operation_total: 0,
+                    };
                     let mut transaction_guard = TransactionalGuard {
                         data_tree,
                         meta_tree,
                         ttl_tree,
                         changed_metric: &mut guard_metrics,
                     };
-                    f(&mut transaction_guard).map_err(|_| ConflictableTransactionError::Abort(()))?;
-                    
+                    f(&mut transaction_guard)
+                        .map_err(|_| ConflictableTransactionError::Abort(()))?;
+
                     Ok(guard_metrics)
                 },
             );
 
-        l.map_err(|_| TransientError::SledTransactionError)?.inc_all_metrics();
+        l.map_err(|_| TransientError::SledTransactionError)?
+            .inc_all_metrics();
         Ok(())
     }
 }
@@ -731,7 +734,6 @@ impl<'a> TransactionalGuard<'a> {
                 freq_tree.insert(byte, Metadata::new(ttl_sec).to_u8()?)?;
             }
         }
-
 
         data_tree.insert(byte, val.as_bytes())?;
 
