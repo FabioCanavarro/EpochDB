@@ -1,8 +1,7 @@
 use std::sync::Arc;
 use std::thread;
 use tempfile::tempdir;
-use epoch_db::DB; // Make sure to import your DB struct
-
+use epoch_db::DB;
 /// Tests the "happy path" for a transaction.
 /// It verifies that if the closure succeeds, all the changes within it
 /// are correctly committed to the database.
