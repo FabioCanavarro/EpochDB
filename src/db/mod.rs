@@ -19,7 +19,7 @@ use std::{
     io::{ErrorKind, Read, Write},
     path::Path,
     str::from_utf8,
-    sync::{atomic::AtomicBool, Arc, Mutex},
+    sync::{atomic::AtomicBool, Arc},
     thread::{self, JoinHandle},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
@@ -534,7 +534,7 @@ impl DB {
 
     pub fn transaction<F>(&mut self, f: F) -> Result<(), TransientError>
     where
-        F: Fn(TransactionalGuard) -> Result<(), Box<dyn Error>>,
+        F: Fn(&mut TransactionalGuard) -> Result<(), Box<dyn Error>>,
     {
             let l: Result<GuardMetricChanged, TransactionError<()>> =
             (&*self.data_tree, &*self.meta_tree, &*self.ttl_tree).transaction(
@@ -548,13 +548,13 @@ impl DB {
                             inc_freq_operation_total: 0,
                             get_operation_total: 0,
                         };
-                    let transaction_guard = TransactionalGuard {
+                    let mut transaction_guard = TransactionalGuard {
                         data_tree,
                         meta_tree,
                         ttl_tree,
                         changed_metric: &mut guard_metrics,
                     };
-                    f(transaction_guard).map_err(|_| ConflictableTransactionError::Abort(()))?;
+                    f(&mut transaction_guard).map_err(|_| ConflictableTransactionError::Abort(()))?;
                     
                     Ok(guard_metrics)
                 },
@@ -737,14 +737,10 @@ impl<'a> TransactionalGuard<'a> {
 
         if let Some(d) = ttl_sec {
             ttl_tree.insert([&d.to_be_bytes()[..], byte].concat(), byte)?;
-            //Metrics::inc_keys_total("ttl");
             self.changed_metric.ttl_keys_total_changed += 1;
         };
 
         // Prometheus metrics
-        //Metrics::increment_operations("set");
-        //Metrics::inc_keys_total("data");
-        //Metrics::inc_keys_total("meta");
         self.changed_metric.keys_total_changed += 1;
         self.changed_metric.set_operation_total += 1;
 
@@ -762,7 +758,6 @@ impl<'a> TransactionalGuard<'a> {
         let byte = key.as_bytes();
         let val = data_tree.get(byte)?;
 
-        // Metrics::increment_operations("get");
         self.changed_metric.get_operation_total += 1;
 
         match val {
@@ -789,7 +784,6 @@ impl<'a> TransactionalGuard<'a> {
         freq_tree.remove(*byte)?;
         freq_tree.insert(*byte, meta.freq_incretement().to_u8()?)?;
 
-        // Metrics::increment_operations("increment_frequency");
         self.changed_metric.inc_freq_operation_total += 1;
 
         Ok(())
@@ -812,18 +806,14 @@ impl<'a> TransactionalGuard<'a> {
         let time = Metadata::from_u8(&meta)?.ttl;
         freq_tree.remove(*byte)?;
 
-        //Metrics::dec_keys_total("data");
-        //Metrics::dec_keys_total("meta");
         self.changed_metric.keys_total_changed -= 1;
 
         if let Some(t) = time {
-            // Metrics::dec_keys_total("ttl");
             self.changed_metric.ttl_keys_total_changed -= 1;
 
             let _ = ttl_tree.remove([&t.to_be_bytes()[..], &byte[..]].concat());
         }
 
-        // Metrics::increment_operations("rm");
         self.changed_metric.rm_operation_total += 1;
 
         Ok(())
