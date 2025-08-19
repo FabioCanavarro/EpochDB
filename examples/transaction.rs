@@ -60,10 +60,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // 5. Verify the final state of the database.
     // The balances should be updated because the transaction succeeded.
     println!("\nFinal state:");
-    println!(
-        "  - Alice's balance: {}",
-        db.get("user:alice")?.unwrap()
-    );
+    println!("  - Alice's balance: {}", db.get("user:alice")?.unwrap());
     println!("  - Bob's balance:   {}", db.get("user:bob")?.unwrap());
 
     assert_eq!(db.get("user:alice")?.unwrap(), "80");

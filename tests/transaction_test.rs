@@ -1,7 +1,7 @@
+use epoch_db::DB;
 use std::sync::Arc;
 use std::thread;
 use tempfile::tempdir;
-use epoch_db::DB;
 /// Tests the "happy path" for a transaction.
 /// It verifies that if the closure succeeds, all the changes within it
 /// are correctly committed to the database.
@@ -26,7 +26,10 @@ fn test_transaction_commit_on_success() {
     assert!(result.is_ok());
 
     // Verify the final state
-    assert!(db.get("user:alice").unwrap().is_none(), "Alice should be removed.");
+    assert!(
+        db.get("user:alice").unwrap().is_none(),
+        "Alice should be removed."
+    );
     assert_eq!(
         db.get("user:bob").unwrap().unwrap(),
         "active_transferred",
@@ -88,13 +91,15 @@ fn test_transaction_isolation() {
         let handle = thread::spawn(move || {
             for _ in 0..increments_per_thread {
                 // Each thread runs its own transaction
-                db_clone.transaction(|tx| {
-                    let current_val_str = tx.get("counter")?.unwrap();
-                    let current_val: u64 = current_val_str.parse()?;
-                    let new_val = current_val + 1;
-                    tx.set("counter", &new_val.to_string(), None)?;
-                    Ok(())
-                }).unwrap();
+                db_clone
+                    .transaction(|tx| {
+                        let current_val_str = tx.get("counter")?.unwrap();
+                        let current_val: u64 = current_val_str.parse()?;
+                        let new_val = current_val + 1;
+                        tx.set("counter", &new_val.to_string(), None)?;
+                        Ok(())
+                    })
+                    .unwrap();
             }
         });
         handles.push(handle);
