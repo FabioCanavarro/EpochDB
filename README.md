@@ -43,7 +43,7 @@ Get started with `EpochDB` by adding it to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-epoch-db = "0.2.6"
+epoch-db = "0.2.8"
 ````
 
 ### Basic Usage
@@ -91,7 +91,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
       * [x] Simple, robust backup engine (`db.backup_to(...)`).
       * [x] Observability (expose performance metrics for Prometheus).
-      * [ ] Ergonomic, high-level transaction API.
+      * [x] Ergonomic, high-level transaction API.
 
   * **V3 (The Ecosystem)**
 
