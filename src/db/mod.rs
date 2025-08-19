@@ -534,7 +534,7 @@ impl DB {
         }
     }
 
-    pub fn transaction<F>(&mut self, f: F) -> Result<(), TransientError>
+    pub fn transaction<F>(&self, f: F) -> Result<(), TransientError>
     where
         F: Fn(&mut TransactionalGuard) -> Result<(), Box<dyn Error>>,
     {
