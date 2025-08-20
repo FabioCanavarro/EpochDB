@@ -344,6 +344,11 @@ impl DB {
         }
     }
 
+    /// Flushes all the trees in the database.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if sled fails to flush the trees.
     pub fn flush(&self) -> Result<(), TransientError> {
         self.data_tree
             .flush()
@@ -358,6 +363,15 @@ impl DB {
         Ok(())
     }
 
+    /// Backup the database to the corresponding path.
+    ///
+    /// # Errors
+    ///
+    /// This function returns an Error if the following occurs:
+    /// - Any corresponding folder in the path is not found
+    /// - Zip or sled fails because of any reason
+    /// - IOError when the file is being access by the OS for something else
+    /// - Failing to parse any data to a [u8] 
     pub fn backup_to(&self, path: &Path) -> Result<(), TransientError> {
         self.flush()?;
 
@@ -381,6 +395,7 @@ impl DB {
 
         zipw.start_file("data.epoch", options)
             .map_err(|e| TransientError::ZipError { error: e })?;
+
         for i in self.data_tree.iter() {
             let iu = i.map_err(|e| TransientError::SledError { error: e })?;
 
@@ -393,7 +408,7 @@ impl DB {
                 .ok_or(TransientError::MetadataNotFound)?;
 
             // NOTE: A usize is diffrent on diffrent machines
-            // and a usize will never exceed a u64 in lenght on paper lol
+            // and a usize will never exceed a u64 in length on paper lol
             let kl: u64 = key
                 .len()
                 .try_into()
@@ -438,6 +453,18 @@ impl DB {
     }
 
     // WARN: Add a transactional batching algorithm to ensure safety incase of a power outage
+    
+    /// This function loads the backup archive from the path given and loads the database in the
+    /// db_path
+    ///
+    /// # Errors
+    ///
+    /// This Function will fail if the following happens:
+    /// - Any corresponding folder in the path is not found
+    /// - Zip or sled fails because of any reason
+    /// - IOError when the file is being access by the OS for something else
+    /// - It fails to parse the .epoch file which may occur due to data corruption or wrong
+    ///   formatting.
     pub fn load_from(path: &Path, db_path: &Path) -> Result<DB, TransientError> {
         if !path.is_file() {
             Err(TransientError::FolderNotFound {
@@ -528,6 +555,8 @@ impl DB {
         Ok(db)
     }
 
+    /// This function returns the iterator of the database, which will contain a key and its
+    /// corresponding value in each iteration, (key, value).
     pub fn iter(&mut self) -> DataIter {
         DataIter {
             data: (self.data_tree.iter(), self.meta_tree.clone()),
@@ -591,6 +620,7 @@ impl Drop for DB {
     }
 }
 
+/// This is an iterator struct that represents the Database main iterator struct.
 pub struct DataIter {
     pub data: (sled::Iter, Arc<sled::Tree>),
 }
@@ -682,6 +712,14 @@ impl GuardMetricChanged {
     }
 }
 
+/// This struct is the Guard for the database Transaction method.
+///
+/// This struct holds all the trees of the main database and the changed_metric, It provides us
+/// with the ability to make transactions for better data safety.
+///
+/// When the transaction method concludes this struct, will check all the changed_metric, and
+/// will increment or decrement the corresponding metric in the real database, to ensure that the
+/// correct metrics will be shown.
 pub struct TransactionalGuard<'a> {
     data_tree: &'a TransactionalTree,
     meta_tree: &'a TransactionalTree,
@@ -691,7 +729,7 @@ pub struct TransactionalGuard<'a> {
 
 // NOTE: The reason why I didn't convert everything to Transient error is because of the
 // UnabortableTransactionError enum, where is error, they will reset,
-// If I fuck with this who knows what will be destroyed TT
+// If I fuck with this who knows what will be fucked up TT
 impl<'a> TransactionalGuard<'a> {
     /// Sets a key-value pair with an optional Time-To-Live (TTL).
     ///
