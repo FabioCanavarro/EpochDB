@@ -20,18 +20,28 @@ pub enum TransientError {
     SledTransactionError,
     /// Error that occurs when parsing a byte slice to a u64 fails.
     ParsingToU64ByteFailed,
+    /// Error that occurs when any folder in the path doesnt exist.
     FolderNotFound {
         path: PathBuf,
     },
+    /// Wrapper for `zip::result::ZipError`.
     ZipError {
+        /// The underlying `zip::result::ZipError`.
         error: zip::result::ZipError,
     },
+    /// Error that occurs when the file doesnt exist.
     FileNameDoesntExist,
+    /// Error that occurs when the corresponding Metadata doesnt exist.
     MetadataNotFound,
+    /// Error that occurs when the Metadata of the database itself doesnt exist.
     DBMetadataNotFound,
+    /// Error that occurs when a Mutex is poisoned.
     PoisonedMutex,
+    /// Error that occurs when parsing from a byte slice to any type.
     ParsingFromByteError,
+    /// Wrapper for `std::io::Error`.
     IOError {
+        /// The underlying `std::io::Error`
         error: std::io::Error,
     },
 }
