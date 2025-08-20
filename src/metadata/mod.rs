@@ -2,13 +2,21 @@
 //! methods. `Metadata` is used to track information about each key-value
 //! pair, such as its creation time, access frequency, and TTL.
 
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{
+    SystemTime,
+    UNIX_EPOCH
+};
+
+use bincode::error::{
+    DecodeError,
+    EncodeError
+};
+use bincode::serde::{
+    decode_from_slice,
+    encode_to_vec
+};
 
 use crate::Metadata;
-use bincode::{
-    error::{DecodeError, EncodeError},
-    serde::{decode_from_slice, encode_to_vec},
-};
 
 impl Metadata {
     /// Creates a new `Metadata` instance with an optional TTL.
@@ -22,7 +30,7 @@ impl Metadata {
         Metadata {
             freq: 0,
             created_at: currtime,
-            ttl,
+            ttl
         }
     }
 

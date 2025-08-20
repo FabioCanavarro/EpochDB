@@ -1,0 +1,11 @@
+style_edition = "2024"
+imports_layout = "Vertical"
+match_block_trailing_comma = true
+imports_granularity = "Module"
+group_imports = "StdExternalCrate"
+struct_lit_single_line = false
+trailing_comma = "Never"
+use_field_init_shorthand = true
+wrap_comments = true
+force_multiline_blocks = true
+format_code_in_doc_comments = true

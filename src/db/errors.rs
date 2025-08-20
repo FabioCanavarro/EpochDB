@@ -1,8 +1,12 @@
-//! This module defines the custom error types used throughout the EpochDB library.
-use std::{error::Error, fmt::Display, path::PathBuf};
+//! This module defines the custom error types used throughout the EpochDB
+//! library.
+use std::error::Error;
+use std::fmt::Display;
+use std::path::PathBuf;
 
 /// The primary error enum for the EpochDB library.
-/// Fun Fact: It's called TransientError because Transient is the old name of the DB
+/// Fun Fact: It's called TransientError because Transient is the old name of
+/// the DB
 #[derive(Debug)]
 pub enum TransientError {
     /// Error that occurs during frequency increment operations.
@@ -14,26 +18,34 @@ pub enum TransientError {
     /// Wrapper for `sled::Error`.
     SledError {
         /// The underlying `sled` error.
-        error: sled::Error,
+        error: sled::Error
     },
     /// Error that occurs during a `sled` transaction.
     SledTransactionError,
     /// Error that occurs when parsing a byte slice to a u64 fails.
     ParsingToU64ByteFailed,
-    FolderNotFound {
-        path: PathBuf,
-    },
+    /// Error that occurs when any folder in the path doesnt exist.
+    FolderNotFound { path: PathBuf },
+    /// Wrapper for `zip::result::ZipError`.
     ZipError {
-        error: zip::result::ZipError,
+        /// The underlying `zip::result::ZipError`.
+        error: zip::result::ZipError
     },
+    /// Error that occurs when the file doesnt exist.
     FileNameDoesntExist,
+    /// Error that occurs when the corresponding Metadata doesnt exist.
     MetadataNotFound,
+    /// Error that occurs when the Metadata of the database itself doesnt exist.
     DBMetadataNotFound,
+    /// Error that occurs when a Mutex is poisoned.
     PoisonedMutex,
+    /// Error that occurs when parsing from a byte slice to any type.
     ParsingFromByteError,
+    /// Wrapper for `std::io::Error`.
     IOError {
-        error: std::io::Error,
-    },
+        /// The underlying `std::io::Error`
+        error: std::io::Error
+    }
 }
 
 impl Display for TransientError {
@@ -42,21 +54,29 @@ impl Display for TransientError {
             TransientError::IncretmentError => writeln!(f, "Incretment has failed"),
             TransientError::ParsingToByteError => writeln!(f, "Parsing to byte failed"),
             TransientError::ParsingToUTF8Error => writeln!(f, "Parsing to utf8 failed"),
-            TransientError::SledError { error } => writeln!(f, "Sled failed {error}"),
+            TransientError::SledError {
+                error
+            } => writeln!(f, "Sled failed {error}"),
             TransientError::SledTransactionError => writeln!(f, "Sled Transaction failed"),
             TransientError::ParsingToU64ByteFailed => {
                 writeln!(f, "Failed to parse a variable to a U64 byte [u8; 8]")
-            }
-            TransientError::FolderNotFound { path } => {
+            },
+            TransientError::FolderNotFound {
+                path
+            } => {
                 writeln!(f, "Folder is not found at the path: {path:#?}")
-            }
-            TransientError::ZipError { error } => writeln!(f, "Zip crate failed {error}"),
+            },
+            TransientError::ZipError {
+                error
+            } => writeln!(f, "Zip crate failed {error}"),
             TransientError::FileNameDoesntExist => writeln!(f, "File name doesnt exist"),
             TransientError::MetadataNotFound => writeln!(f, "Metadata is not found"),
             TransientError::DBMetadataNotFound => writeln!(f, "DB metadata is not found"),
             TransientError::PoisonedMutex => writeln!(f, "Mutex is poisoned"),
             TransientError::ParsingFromByteError => writeln!(f, "Partsing from byte failed"),
-            TransientError::IOError { error } => writeln!(f, "std IO failed {error}"),
+            TransientError::IOError {
+                error
+            } => writeln!(f, "std IO failed {error}")
         }
     }
 }
