@@ -1,6 +1,7 @@
-use epoch_db::DB;
 use std::sync::Arc;
 use std::thread;
+
+use epoch_db::DB;
 use tempfile::tempdir;
 /// Tests the "happy path" for a transaction.
 /// It verifies that if the closure succeeds, all the changes within it

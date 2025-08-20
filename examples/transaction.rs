@@ -1,5 +1,6 @@
-use epoch_db::DB;
 use std::error::Error;
+
+use epoch_db::DB;
 use tempfile::tempdir;
 
 /// This example demonstrates how to use the high-level transaction API

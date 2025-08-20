@@ -1,6 +1,8 @@
-use std::{
-    thread::sleep,
-    time::{Duration, SystemTime, UNIX_EPOCH},
+use std::thread::sleep;
+use std::time::{
+    Duration,
+    SystemTime,
+    UNIX_EPOCH
 };
 
 use epoch_db::DB;

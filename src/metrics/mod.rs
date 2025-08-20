@@ -1,6 +1,10 @@
-// TODO: Refactor the whole file to use Prometheus crate instead for testing purposes
+// TODO: Refactor the whole file to use Prometheus crate instead for testing
+// purposes
 
-use metrics::{counter, gauge};
+use metrics::{
+    counter,
+    gauge
+};
 
 /// A stateless struct that provides a clean, organized API for updating
 /// the application's global Prometheus metrics via the `metrics` facade.

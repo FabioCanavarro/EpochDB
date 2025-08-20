@@ -6,7 +6,7 @@ pub struct GuardMetricChanged {
     pub set_operation_total: u64,
     pub rm_operation_total: u64,
     pub inc_freq_operation_total: u64,
-    pub get_operation_total: u64,
+    pub get_operation_total: u64
 }
 
 impl GuardMetricChanged {

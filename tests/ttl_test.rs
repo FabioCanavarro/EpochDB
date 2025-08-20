@@ -1,4 +1,5 @@
-use std::{thread::sleep, time::Duration};
+use std::thread::sleep;
+use std::time::Duration;
 
 use epoch_db::DB;
 use tempfile::tempdir;
@@ -81,7 +82,7 @@ fn test_manual_removal_of_ttl_key() {
     db.set(
         "user:manual_delete",
         "David",
-        Some(Duration::from_secs(120)),
+        Some(Duration::from_secs(120))
     )
     .unwrap();
 

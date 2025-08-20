@@ -1,10 +1,16 @@
-use std::{error::Error, str::from_utf8, sync::Arc};
+use std::error::Error;
+use std::str::from_utf8;
+use std::sync::Arc;
 
-use crate::{DB, Metadata};
+use crate::{
+    DB,
+    Metadata
+};
 
-/// This is an iterator struct that represents the Database main iterator struct.
+/// This is an iterator struct that represents the Database main iterator
+/// struct.
 pub struct DataIter {
-    pub data: (sled::Iter, Arc<sled::Tree>),
+    pub data: (sled::Iter, Arc<sled::Tree>)
 }
 
 impl Iterator for DataIter {
@@ -59,11 +65,11 @@ impl Iterator for DataIter {
 }
 
 impl DB {
-    /// This function returns the iterator of the database, which will contain a key and its
-    /// corresponding value in each iteration, (key, value).
+    /// This function returns the iterator of the database, which will contain a
+    /// key and its corresponding value in each iteration, (key, value).
     pub fn iter(&mut self) -> DataIter {
         DataIter {
-            data: (self.data_tree.iter(), self.meta_tree.clone()),
+            data: (self.data_tree.iter(), self.meta_tree.clone())
         }
     }
 }

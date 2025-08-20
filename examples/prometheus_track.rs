@@ -1,11 +1,18 @@
-use axum::{Router, extract::State, routing::get};
+use std::path::Path;
+use std::sync::Arc;
+use std::thread::{
+    self,
+    sleep
+};
+use std::time::Duration;
+
+use axum::Router;
+use axum::extract::State;
+use axum::routing::get;
 use epoch_db::DB;
-use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle};
-use std::{
-    path::Path,
-    sync::Arc,
-    thread::{self, sleep},
-    time::Duration,
+use metrics_exporter_prometheus::{
+    PrometheusBuilder,
+    PrometheusHandle
 };
 use tokio::net::TcpListener;
 

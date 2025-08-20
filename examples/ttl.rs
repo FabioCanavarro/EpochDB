@@ -1,7 +1,8 @@
-use epoch_db::DB;
 use std::path::Path;
 use std::thread::sleep;
 use std::time::Duration;
+
+use epoch_db::DB;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let db = DB::new(Path::new("./my_database"))?;
@@ -24,7 +25,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     db.set(
         "user:permanent",
         "This will last forever",
-        Some(Duration::from_secs(1)),
+        Some(Duration::from_secs(1))
     )?;
     db.set("user:permanent", "This will last forever", None)?; // Remove the TTL
 

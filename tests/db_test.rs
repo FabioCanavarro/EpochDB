@@ -1,7 +1,12 @@
-use std::{
-    sync::Arc,
-    thread::{self, sleep},
-    time::{Duration, SystemTime, UNIX_EPOCH},
+use std::sync::Arc;
+use std::thread::{
+    self,
+    sleep
+};
+use std::time::{
+    Duration,
+    SystemTime,
+    UNIX_EPOCH
 };
 
 use epoch_db::DB;
