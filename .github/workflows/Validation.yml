@@ -17,7 +17,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Getting the Rust nightly toolchain
-      run: rustup update nightly && rustup default nightly
+      run: rustup update nightly && rustup default nightly && rustup component add rustfmt
     - name: cargo fmt check
       run: cargo fmt --check
     - name: clippy warnings check
