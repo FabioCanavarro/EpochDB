@@ -2,13 +2,21 @@
 name = "epoch-db"
 license = "MIT OR Apache-2.0"
 description = "An intelligent, persistent, and concurrent key-value store for Rust, designed to manage data with a lifecycle through frequency tracking and TTL."
-repository = "https://github.com/FabioCanavarro/TransientDB"
-homepage = "https://github.com/FabioCanavarro/TransientDB"
+repository = "https://github.com/FabioCanavarro/EpochDB"
+homepage = "https://github.com/FabioCanavarro/EpochDB"
 readme = "README.md"
 keywords = ["database", "kv-store", "sled", "cache", "ttl"]
 categories = ["database-implementations", "caching", "concurrency", "data-structures"]
 version = "0.2.8"
 edition = "2024"
+
+[[bin]]
+name = "epoch"
+path = "./src/bin/cli.rs"
+
+[[bin]]
+name = "epoch-server"
+path = "./src/bin/server.rs"
 
 [lib]
 
