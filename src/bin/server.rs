@@ -1,30 +1,38 @@
 use std::error::Error;
+use std::io::{BufRead, BufReader, Read};
 use std::net::{
     TcpListener,
     TcpStream
 };
+use std::path::PathBuf;
 
+use epoch_db::server::ServerError;
 use epoch_db::DB;
-use epoch_db::db::errors::TransientError;
 use tokio::spawn;
 
-struct ParsedResponse<'a> {
+#[allow(dead_code)]
+struct ParsedResponse {
     command: String,
-    key: Option<&'a str>,
-    value: Option<&'a str>,
+    key: Option<String>,
+    value: Option<String>,
     ttl: Option<u64>
 }
 
+#[allow(dead_code)]
 enum Command {
     Set,
     Get,
     Rm,
     IncrementFrequency,
-    GetMetadata
+    GetMetadata,
+    Ping,
+    DbSize,
+    FlushDb
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+    // TODO: LAZY STATIC DB
     let addr = "localhost:3001";
     let listener = TcpListener::bind(addr)?;
     loop {
@@ -33,15 +41,22 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
 }
 
-async fn response_handler(stream: TcpStream) -> Result<(), TransientError> {
+async fn response_handler(stream: TcpStream) -> Result<(), ServerError> {
+    let mut bufreader = BufReader::new(stream);
+    let cmd = parse_byte(bufreader)?;
+    let feedback = execute_commands(cmd)?;
+
+    Ok(())
+}
+
+fn parse_byte(mut stream: BufReader<TcpStream>) -> Result<ParsedResponse, ServerError> {
+    let mut element_size: Vec<u8> = Vec::new();
+    stream.read_exact(&mut [0])?;
+    stream.read_until(b'\n', &mut element_size)?;
     todo!()
 }
 
-async fn parse_byte(byte: &[u8]) -> Result<Command, Box<dyn Error>> {
-    todo!()
-}
-
-async fn execute_commands(db: DB, command: Command) -> Result<Option<Vec<u8>>, Box<dyn Error>> {
+fn execute_commands(command: ParsedResponse) -> Result<Option<Vec<u8>>, ServerError> {
     todo!()
 }
 
