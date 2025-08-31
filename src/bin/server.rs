@@ -1,6 +1,11 @@
-use std::{error::Error, net::{TcpListener, TcpStream}};
+use std::error::Error;
+use std::net::{
+    TcpListener,
+    TcpStream
+};
 
-use epoch_db::{db::errors::TransientError, DB};
+use epoch_db::DB;
+use epoch_db::db::errors::TransientError;
 use tokio::spawn;
 
 struct ParsedResponse<'a> {
@@ -40,15 +45,19 @@ async fn execute_commands(db: DB, command: Command) -> Result<Option<Vec<u8>>, B
     todo!()
 }
 
-async fn stream_feedback(stream: TcpStream, feedback: Result<&[u8], Box<dyn Error>>) -> Result<(), Box<dyn Error>> {
+async fn stream_feedback(
+    stream: TcpStream,
+    feedback: Result<&[u8], Box<dyn Error>>
+) -> Result<(), Box<dyn Error>> {
     todo!()
 }
 
 /* TODO:
-*   Add a REPL during the loop, so they can issue commands such as:
-*   - Backup, Load(seperated to 2?, one for overwrite one just adds non existing keys)
-*   - Check amount of tll keys
-*   - Check highest freq
-*   - Check amount of ttl keys
-*   - Be able to Get, Set, rm directly from server for speed
-*/
+ *   Add a REPL during the loop, so they can issue commands such as:
+ *   - Backup, Load(seperated to 2?, one for overwrite one just adds non
+ *     existing keys)
+ *   - Check amount of tll keys
+ *   - Check highest freq
+ *   - Check amount of ttl keys
+ *   - Be able to Get, Set, rm directly from server for speed
+ */
