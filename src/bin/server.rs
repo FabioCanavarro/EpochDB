@@ -1,13 +1,17 @@
 use std::error::Error;
-use std::io::{BufRead, BufReader, Read};
+use std::io::{
+    BufRead,
+    BufReader,
+    Read
+};
 use std::net::{
     TcpListener,
     TcpStream
 };
 use std::path::PathBuf;
 
-use epoch_db::server::ServerError;
 use epoch_db::DB;
+use epoch_db::server::ServerError;
 use tokio::spawn;
 
 #[allow(dead_code)]
