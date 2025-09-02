@@ -1,17 +1,9 @@
 use std::error::Error;
-use std::io::{
-    BufRead,
-    BufReader,
-    Read
-};
-use std::net::{
+use tokio::{io::{AsyncBufReadExt, AsyncReadExt, BufReader}, net::{
     TcpListener,
     TcpStream
-};
-use std::path::PathBuf;
-
-use epoch_db::DB;
-use epoch_db::server::ServerError;
+}};
+use epoch_db::{db::errors::TransientError};
 use tokio::spawn;
 
 #[allow(dead_code)]
@@ -38,29 +30,35 @@ enum Command {
 async fn main() -> Result<(), Box<dyn Error>> {
     // TODO: LAZY STATIC DB
     let addr = "localhost:3001";
-    let listener = TcpListener::bind(addr)?;
+    let listener = TcpListener::bind(addr).await?;
     loop {
-        let stream = listener.accept()?.0;
-        let handler = spawn(response_handler(stream));
+        let stream = listener.accept();
+        let handler = spawn(response_handler(stream.await?.0));
     }
 }
 
-async fn response_handler(stream: TcpStream) -> Result<(), ServerError> {
+async fn response_handler(stream: TcpStream) -> Result<(), TransientError> {
     let mut bufreader = BufReader::new(stream);
-    let cmd = parse_byte(bufreader)?;
-    let feedback = execute_commands(cmd)?;
+    let cmd = parse_byte(bufreader);
+    let feedback = execute_commands(cmd);
 
     Ok(())
 }
 
-fn parse_byte(mut stream: BufReader<TcpStream>) -> Result<ParsedResponse, ServerError> {
+async fn parse_byte(mut stream: BufReader<TcpStream>) -> Result<ParsedResponse, TransientError> {
+    // TODO: Maximum size of usize, or they can just do *4000000000000000000
     let mut element_size: Vec<u8> = Vec::new();
-    stream.read_exact(&mut [0])?;
-    stream.read_until(b'\n', &mut element_size)?;
+    stream.read_exact(&mut [0]).await;
+    stream.read_until(b'\n', &mut element_size).await.map_err(|e| TransientError::IOError { error: e })?;
+    
+    let key: Option<String> = None;
+    let value: Option<String> = None;
+    let ttl: Option<u64> = None;
+
     todo!()
 }
 
-fn execute_commands(command: ParsedResponse) -> Result<Option<Vec<u8>>, ServerError> {
+fn execute_commands(command: ParsedResponse) -> Result<Option<Vec<u8>>, TransientError> {
     todo!()
 }
 
