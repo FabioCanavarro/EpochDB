@@ -25,7 +25,9 @@ pub enum TransientError {
     /// Error that occurs when parsing a byte slice to a u64 fails.
     ParsingToU64ByteFailed,
     /// Error that occurs when any folder in the path doesnt exist.
-    FolderNotFound { path: PathBuf },
+    FolderNotFound {
+        path: PathBuf
+    },
     /// Wrapper for `zip::result::ZipError`.
     ZipError {
         /// The underlying `zip::result::ZipError`.

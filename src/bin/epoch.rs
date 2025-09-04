@@ -30,8 +30,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let _ = stream.read_exact(&mut [0]).await;
     stream.read_until(b'\n', &mut element_size).await.map_err(|e| TransientError::IOError { error: e })?;
     
-    println!()
-
     let key: Option<String> = None;
     let value: Option<String> = None;
     let ttl: Option<u64> = None;
