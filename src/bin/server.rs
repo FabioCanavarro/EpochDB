@@ -75,6 +75,35 @@ async fn parse_integer(stream: &mut BufReader<TcpStream>) -> Result<u64, Transie
     num_str.parse::<u64>().map_err(|_| TransientError::InvalidCommand)
 }
 
+
+/// Parses a single Bulk String from the stream (e.g., "$5\r\nhello\r\n").
+async fn parse_bulk_string(
+    stream: &mut BufReader<TcpStream>,
+) -> Result<String, TransientError> {
+    let first_byte = stream.read_u8().await.map_err(|e| TransientError::IOError { error: e })?;
+    if first_byte != b'$' {
+        return Err(TransientError::InvalidCommand);
+    }
+
+    // Parse the length of the string.
+    let len = parse_integer(stream).await?;
+
+    // Read exactly `len` bytes for the data.
+    let mut data_buf = vec![0; len as usize];
+    stream.read_exact(&mut data_buf).await.map_err(|e| TransientError::IOError { error: e })?;
+
+    // The data is followed by a final "\r\n". We must consume this.
+    // Read 2 bytes for the CRLF.
+    let mut crlf_buf = [0; 2];
+    stream.read_exact(&mut crlf_buf).await.map_err(|e| TransientError::IOError { error: e })?;
+    if crlf_buf != *b"\r\n" {
+        return Err(TransientError::InvalidCommand);
+    }
+    
+    // Convert the data bytes to a String.
+    String::from_utf8(data_buf).map_err(|_| TransientError::ParsingToUTF8Error)
+}
+
 fn execute_commands(command: ParsedResponse) -> Result<Option<Vec<u8>>, TransientError> {
     todo!()
 }
