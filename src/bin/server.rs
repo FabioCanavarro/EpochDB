@@ -8,7 +8,7 @@ use tokio::spawn;
 
 #[allow(dead_code)]
 struct ParsedResponse {
-    command: String,
+    command: Command,
     key: Option<String>,
     value: Option<String>,
     ttl: Option<u64>
@@ -75,6 +75,7 @@ async fn parse_command(
         return Err(TransientError::InvalidCommand);
     }
 
+    // TODO: After parsing return an error if there is more than 500 mb worth of elements
     let num_elements = parse_integer(stream).await?;
 
     // Collect each element of the command into a vector.
@@ -85,8 +86,8 @@ async fn parse_command(
     }
     
     // Map the raw command parts to ParsedResponse struct
-     // TODO: Match the command with the command enum by making a from fn
-    let command = command_parts.first().ok_or(TransientError::InvalidCommand)?.to_uppercase();
+    let command_str = command_parts.first().ok_or(TransientError::InvalidCommand)?.to_uppercase();
+    let command = Command::from(command_str);
     let key = command_parts.get(1).cloned();
     let value = command_parts.get(2).cloned();
     let ttl = if let Some(ttl_str) = command_parts.get(3) {
