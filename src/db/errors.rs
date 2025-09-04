@@ -45,7 +45,8 @@ pub enum TransientError {
     IOError {
         /// The underlying `std::io::Error`
         error: std::io::Error
-    }
+    },
+    InvalidCommand
 }
 
 impl Display for TransientError {
@@ -73,10 +74,11 @@ impl Display for TransientError {
             TransientError::MetadataNotFound => writeln!(f, "Metadata is not found"),
             TransientError::DBMetadataNotFound => writeln!(f, "DB metadata is not found"),
             TransientError::PoisonedMutex => writeln!(f, "Mutex is poisoned"),
-            TransientError::ParsingFromByteError => writeln!(f, "Partsing from byte failed"),
+            TransientError::ParsingFromByteError => writeln!(f, "Parsing from byte failed"),
             TransientError::IOError {
                 error
-            } => writeln!(f, "std IO failed {error}")
+            } => writeln!(f, "std IO failed {error}"),
+            TransientError::InvalidCommand => writeln!(f, "Command is invalid")
         }
     }
 }
