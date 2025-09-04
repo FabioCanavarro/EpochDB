@@ -39,7 +39,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 async fn response_handler(stream: TcpStream) -> Result<(), TransientError> {
     let mut bufreader = BufReader::new(stream);
-    let cmd = parse_byte(bufreader);
+    let cmd = parse_byte(bufreader).await.unwrap();
     let feedback = execute_commands(cmd);
 
     Ok(())
@@ -48,14 +48,31 @@ async fn response_handler(stream: TcpStream) -> Result<(), TransientError> {
 async fn parse_byte(mut stream: BufReader<TcpStream>) -> Result<ParsedResponse, TransientError> {
     // TODO: Maximum size of usize, or they can just do *4000000000000000000
     let mut element_size: Vec<u8> = Vec::new();
-    stream.read_exact(&mut [0]).await;
+    let _ = stream.read_exact(&mut [0]).await;
     stream.read_until(b'\n', &mut element_size).await.map_err(|e| TransientError::IOError { error: e })?;
-    
+
     let key: Option<String> = None;
     let value: Option<String> = None;
     let ttl: Option<u64> = None;
 
     todo!()
+}
+
+/// A helper function to read a line terminated by '\n' and parse it as a u64.
+async fn parse_integer(stream: &mut BufReader<TcpStream>) -> Result<u64, TransientError> {
+    let mut buffer = Vec::new();
+    stream.read_until(b'\n', &mut buffer).await.map_err(|e| TransientError::IOError { error: e })?;
+    
+    // The buffer now contains the number and a trailing "\r\n".
+    // We need to trim the last two characters.
+    if buffer.len() < 2 || &buffer[buffer.len()-2..] != b"\r\n" {
+        return Err(TransientError::InvalidCommand);
+    }
+    buffer.truncate(buffer.len() - 2);
+
+    // Convert the bytes to a string, then parse the string into a number.
+    let num_str = from_utf8(&buffer).map_err(|_| TransientError::ParsingToUTF8Error)?;
+    num_str.parse::<u64>().map_err(|_| TransientError::InvalidCommand)
 }
 
 fn execute_commands(command: ParsedResponse) -> Result<Option<Vec<u8>>, TransientError> {

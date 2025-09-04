@@ -18,6 +18,10 @@ path = "./src/bin/cli.rs"
 name = "epoch-server"
 path = "./src/bin/server.rs"
 
+[[bin]]
+name = "test"
+path = "./src/bin/epoch.rs"
+
 [lib]
 
 [dependencies]
