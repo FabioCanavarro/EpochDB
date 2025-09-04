@@ -22,8 +22,25 @@ enum Command {
     IncrementFrequency,
     GetMetadata,
     Ping,
-    DbSize,
-    FlushDb
+    Size,
+    Flush,
+    Invalid
+}
+
+impl From<String> for Command {
+    fn from(value: String) -> Self {
+        match value.to_lowercase().as_str() {
+            "set" => Self::Set,
+            "get" => Self::Get,
+            "rm" => Self::Rm,
+            "increment_frequency" => Self::IncrementFrequency,
+            "get_metadata" => Self::GetMetadata,
+            "ping" => Self::Ping,
+            "size" => Self::Size,
+            "flush" => Self::Flush,
+            _ => Self::Invalid
+        }
+    }
 }
 
 #[tokio::main]
