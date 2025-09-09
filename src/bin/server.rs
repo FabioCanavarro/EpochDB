@@ -2,6 +2,7 @@ use std::error::Error;
 use std::str::from_utf8;
 
 use epoch_db::db::errors::TransientError;
+use epoch_db::DB;
 use tokio::io::{
     AsyncBufReadExt,
     AsyncReadExt,
@@ -184,8 +185,28 @@ async fn parse_bulk_string(stream: &mut BufReader<TcpStream>) -> Result<String, 
     String::from_utf8(data_buf).map_err(|_| TransientError::ParsingToUTF8Error)
 }
 
-fn execute_commands(command: ParsedResponse) -> Result<Option<Vec<u8>>, TransientError> {
-    todo!()
+fn execute_commands(parsed_reponse: ParsedResponse, store: DB) -> Result<Option<Vec<u8>>, TransientError> {
+    let cmd = parsed_reponse.command;
+    let key = parsed_reponse.key;
+    let val = parsed_reponse.value;
+    let ttl = parsed_reponse.ttl;
+    let mut feedback: Option<Vec<u8>> = None;
+
+    match cmd {
+        Command::Set => store.set(key, val, ttl),
+        Command::GetMetadata => {
+            let md = store.get_metadata(key);
+            let byte = md?.ok_or(TransientError::MetadataNotFound)?.to_u8().map_err(|_| TransientError::ParsingToByteError)?;
+            todo!()
+        },
+        Command::Rm => store.remove(key),
+        Command::Flush => store.flush(),
+        Command::Get => {
+            let get_val = store.get(key);
+            let byte = todo!(); // NOTE: I CAN MAKE A FUNC IN STORE That retrieves the u8 version
+        },
+        Command::IncrementFrequency => store.increment_frequency(key),
+    }
 }
 
 async fn stream_feedback(
