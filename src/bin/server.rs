@@ -3,10 +3,14 @@ use std::path::PathBuf;
 use std::str::from_utf8;
 use std::sync::Arc;
 use std::time::Duration;
+
+use epoch_db::DB;
 use epoch_db::db::errors::TransientError;
-use epoch_db::{DB};
 use tokio::io::{
-    AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader
+    AsyncBufReadExt,
+    AsyncReadExt,
+    AsyncWriteExt,
+    BufReader
 };
 use tokio::net::{
     TcpListener,
@@ -107,8 +111,11 @@ async fn parse_command(
     let key = command_parts.get(1).cloned();
     let value = command_parts.get(2).cloned();
     let ttl = if let Some(ttl_str) = command_parts.get(3) {
-        Some(Duration::from_millis(ttl_str.parse::<u64>().map_err(|_| TransientError::ParsingToU64ByteFailed)?)) // TODO: CONFIG BUILDER LOL
-
+        Some(Duration::from_millis(
+            ttl_str
+                .parse::<u64>()
+                .map_err(|_| TransientError::ParsingToU64ByteFailed)?
+        )) // TODO: CONFIG BUILDER LOL
     } else {
         None
     };
@@ -187,7 +194,11 @@ async fn parse_bulk_string(stream: &mut BufReader<TcpStream>) -> Result<String, 
     String::from_utf8(data_buf).map_err(|_| TransientError::ParsingToUTF8Error)
 }
 
-fn execute_commands(parsed_reponse: ParsedResponse, store: Arc<DB>, stream: &mut BufReader<TcpStream>) -> Result<(), TransientError> {
+fn execute_commands(
+    parsed_reponse: ParsedResponse,
+    store: Arc<DB>,
+    stream: &mut BufReader<TcpStream>
+) -> Result<(), TransientError> {
     let cmd = parsed_reponse.command;
     let key = parsed_reponse.key;
     let val = parsed_reponse.value;
@@ -196,14 +207,21 @@ fn execute_commands(parsed_reponse: ParsedResponse, store: Arc<DB>, stream: &mut
 
     match cmd {
         Command::Set => {
-            match store.set(&key.ok_or(TransientError::InvalidCommand)?, &val.ok_or(TransientError::InvalidCommand)?, ttl) {
+            match store.set(
+                &key.ok_or(TransientError::InvalidCommand)?,
+                &val.ok_or(TransientError::InvalidCommand)?,
+                ttl
+            ) {
                 Ok(_) => stream.write_all(b"+OK\r\n"),
                 Err(e) => todo!()
             };
         },
         Command::GetMetadata => {
             let md = store.get_metadata(&key.ok_or(TransientError::InvalidCommand)?);
-            let byte = md?.ok_or(TransientError::MetadataNotFound)?.to_u8().map_err(|_| TransientError::ParsingToByteError)?;
+            let byte = md?
+                .ok_or(TransientError::MetadataNotFound)?
+                .to_u8()
+                .map_err(|_| TransientError::ParsingToByteError)?;
             todo!()
         },
         Command::Rm => {

@@ -48,7 +48,7 @@ pub enum TransientError {
         /// The underlying `std::io::Error`
         error: std::io::Error
     },
-    InvalidCommand,
+    InvalidCommand
 }
 
 impl Display for TransientError {
@@ -80,7 +80,7 @@ impl Display for TransientError {
             TransientError::IOError {
                 error
             } => writeln!(f, "std IO failed {error}"),
-            TransientError::InvalidCommand => writeln!(f, "Command is invalid"),
+            TransientError::InvalidCommand => writeln!(f, "Command is invalid")
         }
     }
 }
