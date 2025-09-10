@@ -1,12 +1,12 @@
 use std::error::Error;
+use std::path::PathBuf;
 use std::str::from_utf8;
-
+use std::sync::Arc;
+use std::time::Duration;
 use epoch_db::db::errors::TransientError;
-use epoch_db::DB;
+use epoch_db::{DB};
 use tokio::io::{
-    AsyncBufReadExt,
-    AsyncReadExt,
-    BufReader
+    AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader
 };
 use tokio::net::{
     TcpListener,
@@ -19,7 +19,7 @@ struct ParsedResponse {
     command: Command,
     key: Option<String>,
     value: Option<String>,
-    ttl: Option<u64>
+    ttl: Option<Duration>
 }
 
 #[allow(dead_code)]
@@ -56,16 +56,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // TODO: LAZY STATIC DB
     let addr = "localhost:3001";
     let listener = TcpListener::bind(addr).await?;
+    let store = Arc::new(DB::new(&PathBuf::from("./")).unwrap()); // TODO: CHANGE THIS TO USE CLI
     loop {
         let stream = listener.accept();
-        let handler = spawn(response_handler(stream.await?.0));
+        let handler = spawn(response_handler(stream.await?.0, store.clone()));
     }
 }
 
-async fn response_handler(stream: TcpStream) -> Result<(), TransientError> {
+async fn response_handler(stream: TcpStream, store: Arc<DB>) -> Result<(), TransientError> {
     let mut bufreader = BufReader::new(stream);
     let cmd = parse_command(&mut bufreader).await.unwrap();
-    let feedback = execute_commands(cmd);
+    let feedback = execute_commands(cmd, store, &mut bufreader);
 
     Ok(())
 }
@@ -106,7 +107,8 @@ async fn parse_command(
     let key = command_parts.get(1).cloned();
     let value = command_parts.get(2).cloned();
     let ttl = if let Some(ttl_str) = command_parts.get(3) {
-        ttl_str.parse::<u64>().ok()
+        Some(Duration::from_millis(ttl_str.parse::<u64>().map_err(|_| TransientError::ParsingToU64ByteFailed)?)) // TODO: CONFIG BUILDER LOL
+
     } else {
         None
     };
@@ -185,7 +187,7 @@ async fn parse_bulk_string(stream: &mut BufReader<TcpStream>) -> Result<String, 
     String::from_utf8(data_buf).map_err(|_| TransientError::ParsingToUTF8Error)
 }
 
-fn execute_commands(parsed_reponse: ParsedResponse, store: DB) -> Result<Option<Vec<u8>>, TransientError> {
+fn execute_commands(parsed_reponse: ParsedResponse, store: Arc<DB>, stream: &mut BufReader<TcpStream>) -> Result<(), TransientError> {
     let cmd = parsed_reponse.command;
     let key = parsed_reponse.key;
     let val = parsed_reponse.value;
@@ -193,27 +195,44 @@ fn execute_commands(parsed_reponse: ParsedResponse, store: DB) -> Result<Option<
     let mut feedback: Option<Vec<u8>> = None;
 
     match cmd {
-        Command::Set => store.set(key, val, ttl),
+        Command::Set => {
+            match store.set(&key.ok_or(TransientError::InvalidCommand)?, &val.ok_or(TransientError::InvalidCommand)?, ttl) {
+                Ok(_) => stream.write_all(b"+OK\r\n"),
+                Err(e) => todo!()
+            };
+        },
         Command::GetMetadata => {
-            let md = store.get_metadata(key);
+            let md = store.get_metadata(&key.ok_or(TransientError::InvalidCommand)?);
             let byte = md?.ok_or(TransientError::MetadataNotFound)?.to_u8().map_err(|_| TransientError::ParsingToByteError)?;
             todo!()
         },
-        Command::Rm => store.remove(key),
-        Command::Flush => store.flush(),
+        Command::Rm => {
+            store.remove(&key.ok_or(TransientError::InvalidCommand)?);
+            todo!()
+        },
+        Command::Flush => {
+            store.flush();
+            todo!()
+        },
         Command::Get => {
-            let get_val = store.get(key);
+            let get_val = store.get(&key.ok_or(TransientError::InvalidCommand)?);
             let byte = todo!(); // NOTE: I CAN MAKE A FUNC IN STORE That retrieves the u8 version
         },
-        Command::IncrementFrequency => store.increment_frequency(key),
+        Command::IncrementFrequency => {
+            store.increment_frequency(&key.ok_or(TransientError::InvalidCommand)?);
+        },
+        Command::Ping => {
+            todo!()
+        },
+        Command::Size => {
+            todo!()
+        },
+        Command::Invalid => {
+            todo!()
+        }
     }
-}
 
-async fn stream_feedback(
-    stream: TcpStream,
-    feedback: Result<&[u8], Box<dyn Error>>
-) -> Result<(), Box<dyn Error>> {
-    todo!()
+    Ok(())
 }
 
 /* TODO:
