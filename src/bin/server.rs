@@ -194,7 +194,7 @@ async fn parse_bulk_string(stream: &mut BufReader<TcpStream>) -> Result<String, 
     String::from_utf8(data_buf).map_err(|_| TransientError::ParsingToUTF8Error)
 }
 
-fn execute_commands(
+async fn execute_commands(
     parsed_reponse: ParsedResponse,
     store: Arc<DB>,
     stream: &mut BufReader<TcpStream>
@@ -205,6 +205,7 @@ fn execute_commands(
     let ttl = parsed_reponse.ttl;
     let mut feedback: Option<Vec<u8>> = None;
 
+    // WARNING: dont use e
     match cmd {
         Command::Set => {
             match store.set(
@@ -212,41 +213,75 @@ fn execute_commands(
                 &val.ok_or(TransientError::InvalidCommand)?,
                 ttl
             ) {
-                Ok(_) => stream.write_all(b"+OK\r\n"),
-                Err(e) => todo!()
+                Ok(_) => stream.write_all(b"+OK\r\n").await.map_err(|e| TransientError::IOError { error: e })?,
+                Err(e) => stream.write_all(format!("+ERR {}\r\n",e).as_bytes()).await.map_err(|e| TransientError::IOError { error: e })?
             };
         },
         Command::GetMetadata => {
-            let md = store.get_metadata(&key.ok_or(TransientError::InvalidCommand)?);
-            let byte = md?
-                .ok_or(TransientError::MetadataNotFound)?
-                .to_u8()
-                .map_err(|_| TransientError::ParsingToByteError)?;
-            todo!()
+            match store.get_metadata(&key.ok_or(TransientError::InvalidCommand)?) {
+                Ok(v) => {
+                    match v {
+                        Some(val) => {
+                            // TODO: use * and $ to denote amount of element to send like *4 all
+                            // data yayyy
+                            let size = val.len();
+                            stream.write_all(format!("${}\r\n{}\r\n", size, val).as_bytes()).await.map_err(|e| TransientError::IOError { error: e })?
+
+                        },
+                        None => stream.write_all(b"$-1\r\n").await.map_err(|e| TransientError::IOError { error: e })?
+                    }
+                },
+                Err(e) => stream.write_all(format!("+ERR {}\r\n",e).as_bytes()).await.map_err(|e| TransientError::IOError { error: e })?
+            }
+
         },
         Command::Rm => {
-            store.remove(&key.ok_or(TransientError::InvalidCommand)?);
+            match store.remove(&key.ok_or(TransientError::InvalidCommand)?) {
+                Ok(_) => stream.write_all(b"+OK\r\n").await.map_err(|e| TransientError::IOError { error: e })?,
+                Err(e) => stream.write_all(format!("+ERR {}\r\n",e).as_bytes()).await.map_err(|e| TransientError::IOError { error: e })?
+            };
+
             todo!()
         },
         Command::Flush => {
-            store.flush();
-            todo!()
+            match store.flush() {
+                Ok(_) => stream.write_all(b"+OK\r\n").await.map_err(|e| TransientError::IOError { error: e })?,
+                Err(e) => stream.write_all(format!("+ERR {}\r\n",e).as_bytes()).await.map_err(|e| TransientError::IOError { error: e })?
+            };
         },
         Command::Get => {
-            let get_val = store.get(&key.ok_or(TransientError::InvalidCommand)?);
-            let byte = todo!(); // NOTE: I CAN MAKE A FUNC IN STORE That retrieves the u8 version
+            match store.get(&key.ok_or(TransientError::InvalidCommand)?) {
+                Ok(v) => {
+                    match v {
+                        Some(val) => {
+                            let size = val.len();
+                            stream.write_all(format!("${}\r\n{}\r\n", size, val).as_bytes()).await.map_err(|e| TransientError::IOError { error: e })?
+
+                        },
+                        None => stream.write_all(b"$-1\r\n").await.map_err(|e| TransientError::IOError { error: e })?
+                    }
+                },
+                Err(e) => stream.write_all(format!("+ERR {}\r\n",e).as_bytes()).await.map_err(|e| TransientError::IOError { error: e })?
+            }
         },
         Command::IncrementFrequency => {
-            store.increment_frequency(&key.ok_or(TransientError::InvalidCommand)?);
+            match store.increment_frequency(&key.ok_or(TransientError::InvalidCommand)?) {
+                Ok(_) => stream.write_all(b"+OK\r\n").await.map_err(|e| TransientError::IOError { error: e })?,
+                Err(e) => stream.write_all(format!("+ERR {}\r\n",e).as_bytes()).await.map_err(|e| TransientError::IOError { error: e })?
+            };
+
         },
         Command::Ping => {
-            todo!()
+            stream.write_all(b"+PONG\r\n").await.map_err(|e| TransientError::IOError { error: e })?
         },
         Command::Size => {
-            todo!()
+            let size = store.get_db_size();
+            stream.write_all(format!(":{}\r\n", size).as_bytes()).await.map_err(|e| TransientError::IOError { error: e })?
+
         },
         Command::Invalid => {
-            todo!()
+            stream.write_all(format!("+ERR {}\r\n", TransientError::InvalidCommand).as_bytes()).await.map_err(|e| TransientError::IOError { error: e })?
+
         }
     }
 

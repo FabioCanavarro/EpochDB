@@ -28,7 +28,7 @@ use std::time::{
 
 use chrono::Local;
 use errors::TransientError;
-use sled::Config;
+use sled::{Config, IVec};
 use sled::transaction::{
     ConflictableTransactionError,
     TransactionError,
@@ -678,6 +678,10 @@ impl DB {
         }
 
         Ok(db)
+    }
+
+    pub fn get_db_size(&self) -> usize {
+        self.data_tree.len()
     }
 }
 
