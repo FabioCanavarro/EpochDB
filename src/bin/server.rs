@@ -4,8 +4,8 @@ use std::str::from_utf8;
 use std::sync::Arc;
 use std::time::Duration;
 
-use epoch_db::DB;
 use epoch_db::db::errors::TransientError;
+use epoch_db::DB;
 use tokio::io::{
     AsyncBufReadExt,
     AsyncReadExt,
@@ -213,8 +213,23 @@ async fn execute_commands(
                 &val.ok_or(TransientError::InvalidCommand)?,
                 ttl
             ) {
-                Ok(_) => stream.write_all(b"+OK\r\n").await.map_err(|e| TransientError::IOError { error: e })?,
-                Err(e) => stream.write_all(format!("+ERR {}\r\n",e).as_bytes()).await.map_err(|e| TransientError::IOError { error: e })?
+                Ok(_) => {
+                    stream.write_all(b"+OK\r\n").await.map_err(|e| {
+                        TransientError::IOError {
+                            error: e
+                        }
+                    })?
+                },
+                Err(e) => {
+                    stream
+                        .write_all(format!("+ERR {}\r\n", e).as_bytes())
+                        .await
+                        .map_err(|e| {
+                            TransientError::IOError {
+                                error: e
+                            }
+                        })?
+                },
             };
         },
         Command::GetMetadata => {
@@ -225,28 +240,78 @@ async fn execute_commands(
                             // TODO: use * and $ to denote amount of element to send like *4 all
                             // data yayyy
                             let size = val.len();
-                            stream.write_all(format!("${}\r\n{}\r\n", size, val).as_bytes()).await.map_err(|e| TransientError::IOError { error: e })?
-
+                            stream
+                                .write_all(format!("${}\r\n{}\r\n", size, val).as_bytes())
+                                .await
+                                .map_err(|e| {
+                                    TransientError::IOError {
+                                        error: e
+                                    }
+                                })?
                         },
-                        None => stream.write_all(b"$-1\r\n").await.map_err(|e| TransientError::IOError { error: e })?
+                        None => {
+                            stream.write_all(b"$-1\r\n").await.map_err(|e| {
+                                TransientError::IOError {
+                                    error: e
+                                }
+                            })?
+                        },
                     }
                 },
-                Err(e) => stream.write_all(format!("+ERR {}\r\n",e).as_bytes()).await.map_err(|e| TransientError::IOError { error: e })?
+                Err(e) => {
+                    stream
+                        .write_all(format!("+ERR {}\r\n", e).as_bytes())
+                        .await
+                        .map_err(|e| {
+                            TransientError::IOError {
+                                error: e
+                            }
+                        })?
+                },
             }
-
         },
         Command::Rm => {
             match store.remove(&key.ok_or(TransientError::InvalidCommand)?) {
-                Ok(_) => stream.write_all(b"+OK\r\n").await.map_err(|e| TransientError::IOError { error: e })?,
-                Err(e) => stream.write_all(format!("+ERR {}\r\n",e).as_bytes()).await.map_err(|e| TransientError::IOError { error: e })?
+                Ok(_) => {
+                    stream.write_all(b"+OK\r\n").await.map_err(|e| {
+                        TransientError::IOError {
+                            error: e
+                        }
+                    })?
+                },
+                Err(e) => {
+                    stream
+                        .write_all(format!("+ERR {}\r\n", e).as_bytes())
+                        .await
+                        .map_err(|e| {
+                            TransientError::IOError {
+                                error: e
+                            }
+                        })?
+                },
             };
 
             todo!()
         },
         Command::Flush => {
             match store.flush() {
-                Ok(_) => stream.write_all(b"+OK\r\n").await.map_err(|e| TransientError::IOError { error: e })?,
-                Err(e) => stream.write_all(format!("+ERR {}\r\n",e).as_bytes()).await.map_err(|e| TransientError::IOError { error: e })?
+                Ok(_) => {
+                    stream.write_all(b"+OK\r\n").await.map_err(|e| {
+                        TransientError::IOError {
+                            error: e
+                        }
+                    })?
+                },
+                Err(e) => {
+                    stream
+                        .write_all(format!("+ERR {}\r\n", e).as_bytes())
+                        .await
+                        .map_err(|e| {
+                            TransientError::IOError {
+                                error: e
+                            }
+                        })?
+                },
             };
         },
         Command::Get => {
@@ -255,34 +320,85 @@ async fn execute_commands(
                     match v {
                         Some(val) => {
                             let size = val.len();
-                            stream.write_all(format!("${}\r\n{}\r\n", size, val).as_bytes()).await.map_err(|e| TransientError::IOError { error: e })?
-
+                            stream
+                                .write_all(format!("${}\r\n{}\r\n", size, val).as_bytes())
+                                .await
+                                .map_err(|e| {
+                                    TransientError::IOError {
+                                        error: e
+                                    }
+                                })?
                         },
-                        None => stream.write_all(b"$-1\r\n").await.map_err(|e| TransientError::IOError { error: e })?
+                        None => {
+                            stream.write_all(b"$-1\r\n").await.map_err(|e| {
+                                TransientError::IOError {
+                                    error: e
+                                }
+                            })?
+                        },
                     }
                 },
-                Err(e) => stream.write_all(format!("+ERR {}\r\n",e).as_bytes()).await.map_err(|e| TransientError::IOError { error: e })?
+                Err(e) => {
+                    stream
+                        .write_all(format!("+ERR {}\r\n", e).as_bytes())
+                        .await
+                        .map_err(|e| {
+                            TransientError::IOError {
+                                error: e
+                            }
+                        })?
+                },
             }
         },
         Command::IncrementFrequency => {
             match store.increment_frequency(&key.ok_or(TransientError::InvalidCommand)?) {
-                Ok(_) => stream.write_all(b"+OK\r\n").await.map_err(|e| TransientError::IOError { error: e })?,
-                Err(e) => stream.write_all(format!("+ERR {}\r\n",e).as_bytes()).await.map_err(|e| TransientError::IOError { error: e })?
+                Ok(_) => {
+                    stream.write_all(b"+OK\r\n").await.map_err(|e| {
+                        TransientError::IOError {
+                            error: e
+                        }
+                    })?
+                },
+                Err(e) => {
+                    stream
+                        .write_all(format!("+ERR {}\r\n", e).as_bytes())
+                        .await
+                        .map_err(|e| {
+                            TransientError::IOError {
+                                error: e
+                            }
+                        })?
+                },
             };
-
         },
         Command::Ping => {
-            stream.write_all(b"+PONG\r\n").await.map_err(|e| TransientError::IOError { error: e })?
+            stream.write_all(b"+PONG\r\n").await.map_err(|e| {
+                TransientError::IOError {
+                    error: e
+                }
+            })?
         },
         Command::Size => {
             let size = store.get_db_size();
-            stream.write_all(format!(":{}\r\n", size).as_bytes()).await.map_err(|e| TransientError::IOError { error: e })?
-
+            stream
+                .write_all(format!(":{}\r\n", size).as_bytes())
+                .await
+                .map_err(|e| {
+                    TransientError::IOError {
+                        error: e
+                    }
+                })?
         },
         Command::Invalid => {
-            stream.write_all(format!("+ERR {}\r\n", TransientError::InvalidCommand).as_bytes()).await.map_err(|e| TransientError::IOError { error: e })?
-
-        }
+            stream
+                .write_all(format!("+ERR {}\r\n", TransientError::InvalidCommand).as_bytes())
+                .await
+                .map_err(|e| {
+                    TransientError::IOError {
+                        error: e
+                    }
+                })?
+        },
     }
 
     Ok(())

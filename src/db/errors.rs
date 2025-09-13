@@ -82,7 +82,7 @@ impl Display for TransientError {
                 error
             } => writeln!(f, "std IO failed {error}"),
             TransientError::InvalidCommand => writeln!(f, "Command is invalid"),
-            TransientError::ValueNotFound => writeln!(f, "Value is not found"),
+            TransientError::ValueNotFound => writeln!(f, "Value is not found")
         }
     }
 }
