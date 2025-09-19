@@ -8,15 +8,19 @@ use epoch_db::db::errors::TransientError;
 use epoch_db::metadata::RespValue;
 use epoch_db::DB;
 use tokio::io::{
-    AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader, BufWriter
+    AsyncBufReadExt,
+    AsyncReadExt,
+    AsyncWriteExt,
+    BufReader,
+    BufWriter
+};
+use tokio::net::tcp::{
+    ReadHalf,
+    WriteHalf
 };
 use tokio::net::{
     TcpListener,
-    TcpStream,
-    tcp::{
-        WriteHalf,
-        ReadHalf
-    }
+    TcpStream
 };
 use tokio::spawn;
 
@@ -199,7 +203,7 @@ async fn parse_bulk_string(stream: &mut BufReader<ReadHalf<'_>>) -> Result<Strin
     String::from_utf8(data_buf).map_err(|_| TransientError::ParsingToUTF8Error)
 }
 
-async fn execute_commands (
+async fn execute_commands(
     parsed_reponse: ParsedResponse,
     store: Arc<DB>,
     stream: &mut BufWriter<WriteHalf<'_>>
