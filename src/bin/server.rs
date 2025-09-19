@@ -11,7 +11,7 @@ use tokio::io::{
     AsyncBufReadExt,
     AsyncReadExt,
     AsyncWriteExt,
-    BufReader
+    BufReader, BufWriter
 };
 use tokio::net::{
     TcpListener,
@@ -71,7 +71,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
 async fn response_handler(stream: TcpStream, store: Arc<DB>) -> Result<(), TransientError> {
     let mut bufreader = BufReader::new(stream);
     let cmd = parse_command(&mut bufreader).await.unwrap();
-    let feedback = execute_commands(cmd, store, &mut bufreader);
+    let mut bufwriter = BufWriter::new(bufreader);
+    let feedback = execute_commands(cmd, store, &mut bufwriter);
 
     Ok(())
 }
@@ -198,7 +199,7 @@ async fn parse_bulk_string(stream: &mut BufReader<TcpStream>) -> Result<String, 
 async fn execute_commands(
     parsed_reponse: ParsedResponse,
     store: Arc<DB>,
-    stream: &mut BufReader<TcpStream>
+    stream: &mut BufWriter<TcpStream>
 ) -> Result<(), TransientError> {
     let cmd = parsed_reponse.command;
     let key = parsed_reponse.key;
@@ -223,7 +224,7 @@ async fn execute_commands(
                 },
                 Err(e) => {
                     stream
-                        .write_all(format!("+ERR {}\r\n", e).as_bytes())
+                        .write_all(format!("-ERR {}\r\n", e).as_bytes())
                         .await
                         .map_err(|e| {
                             TransientError::IOError {
@@ -240,7 +241,7 @@ async fn execute_commands(
                         Some(val) => {
                             let array = val.to_response();
                             stream
-                                .write(format!("*{}\r\n", array.len()).as_bytes())
+                                .write(format!("*{}\r\n", array.len() * 2).as_bytes())
                                 .await
                                 .map_err(|e| {
                                     TransientError::IOError {
@@ -298,6 +299,7 @@ async fn execute_commands(
                                     }
                                 };
                             }
+                            stream.flush().await.map_err(|e| TransientError::IOError { error: e } )?;
                         },
                         None => {
                             stream.write_all(b"$-1\r\n").await.map_err(|e| {
@@ -310,7 +312,7 @@ async fn execute_commands(
                 },
                 Err(e) => {
                     stream
-                        .write_all(format!("+ERR {}\r\n", e).as_bytes())
+                        .write_all(format!("-ERR {}\r\n", e).as_bytes())
                         .await
                         .map_err(|e| {
                             TransientError::IOError {
@@ -331,7 +333,7 @@ async fn execute_commands(
                 },
                 Err(e) => {
                     stream
-                        .write_all(format!("+ERR {}\r\n", e).as_bytes())
+                        .write_all(format!("-ERR {}\r\n", e).as_bytes())
                         .await
                         .map_err(|e| {
                             TransientError::IOError {
@@ -354,7 +356,7 @@ async fn execute_commands(
                 },
                 Err(e) => {
                     stream
-                        .write_all(format!("+ERR {}\r\n", e).as_bytes())
+                        .write_all(format!("-ERR {}\r\n", e).as_bytes())
                         .await
                         .map_err(|e| {
                             TransientError::IOError {
@@ -390,7 +392,7 @@ async fn execute_commands(
                 },
                 Err(e) => {
                     stream
-                        .write_all(format!("+ERR {}\r\n", e).as_bytes())
+                        .write_all(format!("-ERR {}\r\n", e).as_bytes())
                         .await
                         .map_err(|e| {
                             TransientError::IOError {
@@ -411,7 +413,7 @@ async fn execute_commands(
                 },
                 Err(e) => {
                     stream
-                        .write_all(format!("+ERR {}\r\n", e).as_bytes())
+                        .write_all(format!("-ERR {}\r\n", e).as_bytes())
                         .await
                         .map_err(|e| {
                             TransientError::IOError {
@@ -441,7 +443,7 @@ async fn execute_commands(
         },
         Command::Invalid => {
             stream
-                .write_all(format!("+ERR {}\r\n", TransientError::InvalidCommand).as_bytes())
+                .write_all(format!("-ERR {}\r\n", TransientError::InvalidCommand).as_bytes())
                 .await
                 .map_err(|e| {
                     TransientError::IOError {
