@@ -81,7 +81,6 @@ impl Metadata {
 
 pub enum RespValue {
     U64(u64),
-    I32(i32),
     BulkString(Vec<u8>),
     None
 }
