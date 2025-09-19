@@ -237,17 +237,10 @@ async fn execute_commands(
                 Ok(v) => {
                     match v {
                         Some(val) => {
-                            if let Some(t) = val.ttl {
-                                stream
-                                    .write_all(format!("*6\r\n:{}\r\n:{}\r\n:{}\r\n", val.freq, val.created_at, t).as_bytes())
-                                    .await
-                                    .map_err(|e| {
-                                        TransientError::IOError {
-                                            error: e
-                                        }
-                                    })?;
-                                return Ok(());
-
+                            let array = val.to_response();
+                            let len = array.len();
+                            for i in array {
+                                let key = i.0;
                             }
                             stream
                                 .write_all(format!("*2\r\n:{}\r\n:{}\r\n", val.freq, val.created_at).as_bytes())
