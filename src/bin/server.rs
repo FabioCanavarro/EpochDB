@@ -11,7 +11,8 @@ use tokio::io::{
     AsyncBufReadExt,
     AsyncReadExt,
     AsyncWriteExt,
-    BufReader, BufWriter
+    BufReader,
+    BufWriter
 };
 use tokio::net::{
     TcpListener,
@@ -299,7 +300,11 @@ async fn execute_commands(
                                     }
                                 };
                             }
-                            stream.flush().await.map_err(|e| TransientError::IOError { error: e } )?;
+                            stream.flush().await.map_err(|e| {
+                                TransientError::IOError {
+                                    error: e
+                                }
+                            })?;
                         },
                         None => {
                             stream.write_all(b"$-1\r\n").await.map_err(|e| {
