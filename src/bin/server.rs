@@ -8,15 +8,15 @@ use epoch_db::db::errors::TransientError;
 use epoch_db::metadata::RespValue;
 use epoch_db::DB;
 use tokio::io::{
-    AsyncBufReadExt,
-    AsyncReadExt,
-    AsyncWriteExt,
-    BufReader,
-    BufWriter
+    AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader, BufWriter
 };
 use tokio::net::{
     TcpListener,
-    TcpStream
+    TcpStream,
+    tcp::{
+        WriteHalf,
+        ReadHalf
+    }
 };
 use tokio::spawn;
 
@@ -65,15 +65,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let store = Arc::new(DB::new(&PathBuf::from("./")).unwrap()); // TODO: CHANGE THIS TO USE CLI
     loop {
         let stream = listener.accept();
-        let handler = spawn(response_handler(stream.await?.0, store.clone()));
+        let _handler = spawn(response_handler(stream.await?.0, store.clone()));
     }
 }
 
-async fn response_handler(stream: TcpStream, store: Arc<DB>) -> Result<(), TransientError> {
-    let mut bufreader = BufReader::new(stream);
+async fn response_handler(mut stream: TcpStream, store: Arc<DB>) -> Result<(), TransientError> {
+    let (reader, writer) = stream.split();
+
+    let mut bufreader = BufReader::new(reader);
     let cmd = parse_command(&mut bufreader).await.unwrap();
-    let mut bufwriter = BufWriter::new(bufreader);
-    let feedback = execute_commands(cmd, store, &mut bufwriter);
+    let mut bufwriter = BufWriter::new(writer);
+    let _feedback = execute_commands(cmd, store, &mut bufwriter);
 
     Ok(())
 }
@@ -81,7 +83,7 @@ async fn response_handler(stream: TcpStream, store: Arc<DB>) -> Result<(), Trans
 /// Parses a single RESP command from the stream
 /// This is the main entry point for the parser
 async fn parse_command(
-    stream: &mut BufReader<TcpStream>
+    stream: &mut BufReader<ReadHalf<'_>>
 ) -> Result<ParsedResponse, TransientError> {
     let first_byte = stream.read_u8().await.map_err(|e| {
         TransientError::IOError {
@@ -132,7 +134,7 @@ async fn parse_command(
 }
 
 /// A helper function to read a line terminated by '\n' and parse it as a u64
-async fn parse_integer(stream: &mut BufReader<TcpStream>) -> Result<u64, TransientError> {
+async fn parse_integer(stream: &mut BufReader<ReadHalf<'_>>) -> Result<u64, TransientError> {
     let mut buffer = Vec::new();
     stream.read_until(b'\n', &mut buffer).await.map_err(|e| {
         TransientError::IOError {
@@ -158,7 +160,7 @@ async fn parse_integer(stream: &mut BufReader<TcpStream>) -> Result<u64, Transie
 }
 
 /// Parses a single Bulk String from the stream (e.g., "$5\r\nhello\r\n")
-async fn parse_bulk_string(stream: &mut BufReader<TcpStream>) -> Result<String, TransientError> {
+async fn parse_bulk_string(stream: &mut BufReader<ReadHalf<'_>>) -> Result<String, TransientError> {
     let first_byte = stream.read_u8().await.map_err(|e| {
         TransientError::IOError {
             error: e
@@ -197,16 +199,15 @@ async fn parse_bulk_string(stream: &mut BufReader<TcpStream>) -> Result<String, 
     String::from_utf8(data_buf).map_err(|_| TransientError::ParsingToUTF8Error)
 }
 
-async fn execute_commands(
+async fn execute_commands (
     parsed_reponse: ParsedResponse,
     store: Arc<DB>,
-    stream: &mut BufWriter<TcpStream>
+    stream: &mut BufWriter<WriteHalf<'_>>
 ) -> Result<(), TransientError> {
     let cmd = parsed_reponse.command;
     let key = parsed_reponse.key;
     let val = parsed_reponse.value;
     let ttl = parsed_reponse.ttl;
-    let mut feedback: Option<Vec<u8>> = None;
 
     // WARNING: dont use e
     match cmd {
