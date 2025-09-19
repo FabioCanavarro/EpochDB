@@ -237,11 +237,20 @@ async fn execute_commands(
                 Ok(v) => {
                     match v {
                         Some(val) => {
-                            // TODO: use * and $ to denote amount of element to send like *4 all
-                            // data yayyy
-                            let size = val.len();
+                            if let Some(t) = val.ttl {
+                                stream
+                                    .write_all(format!("*6\r\n:{}\r\n:{}\r\n:{}\r\n", val.freq, val.created_at, t).as_bytes())
+                                    .await
+                                    .map_err(|e| {
+                                        TransientError::IOError {
+                                            error: e
+                                        }
+                                    })?;
+                                return Ok(());
+
+                            }
                             stream
-                                .write_all(format!("${}\r\n{}\r\n", size, val).as_bytes())
+                                .write_all(format!("*2\r\n:{}\r\n:{}\r\n", val.freq, val.created_at).as_bytes())
                                 .await
                                 .map_err(|e| {
                                     TransientError::IOError {
