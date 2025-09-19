@@ -69,8 +69,9 @@ impl Metadata {
         vec![
             ("frequency".to_string(), RespValue::U64(self.freq)),
             ("created_at".to_string(), RespValue::U64(self.created_at)),
-            ("ttl".to_string(), 
-                match self.ttl  {
+            (
+                "ttl".to_string(),
+                match self.ttl {
                     Some(t) => RespValue::U64(t),
                     None => RespValue::None
                 }

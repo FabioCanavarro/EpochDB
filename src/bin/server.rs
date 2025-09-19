@@ -239,22 +239,62 @@ async fn execute_commands(
                     match v {
                         Some(val) => {
                             let array = val.to_response();
-                            stream.write(format!("*{}\r\n", array.len()).as_bytes()).await.map_err(|e| TransientError::IOError { error: e })?;
+                            stream
+                                .write(format!("*{}\r\n", array.len()).as_bytes())
+                                .await
+                                .map_err(|e| {
+                                    TransientError::IOError {
+                                        error: e
+                                    }
+                                })?;
 
                             for i in array {
                                 let key = i.0;
-                                stream.write(format!("${}\r\n{}\r\n", key.len(), key).as_bytes()).await.map_err(|e| TransientError::IOError { error: e })?;
+                                stream
+                                    .write(format!("${}\r\n{}\r\n", key.len(), key).as_bytes())
+                                    .await
+                                    .map_err(|e| {
+                                        TransientError::IOError {
+                                            error: e
+                                        }
+                                    })?;
                                 match i.1 {
                                     RespValue::U64(u) => {
-                                        stream.write(format!(":{u}\r\n").as_bytes()).await.map_err(|e| TransientError::IOError { error: e })?;
+                                        stream
+                                            .write(format!(":{u}\r\n").as_bytes())
+                                            .await
+                                            .map_err(|e| {
+                                                TransientError::IOError {
+                                                    error: e
+                                                }
+                                            })?;
                                     },
                                     RespValue::BulkString(v) => {
-                                        stream.write(format!("${}\r\n", v.len()).as_bytes()).await.map_err(|e| TransientError::IOError { error: e })?;
-                                        stream.write(&v).await.map_err(|e| TransientError::IOError { error: e })?;
-                                        stream.write(b"\r\n").await.map_err(|e| TransientError::IOError { error: e })?;
+                                        stream
+                                            .write(format!("${}\r\n", v.len()).as_bytes())
+                                            .await
+                                            .map_err(|e| {
+                                                TransientError::IOError {
+                                                    error: e
+                                                }
+                                            })?;
+                                        stream.write(&v).await.map_err(|e| {
+                                            TransientError::IOError {
+                                                error: e
+                                            }
+                                        })?;
+                                        stream.write(b"\r\n").await.map_err(|e| {
+                                            TransientError::IOError {
+                                                error: e
+                                            }
+                                        })?;
                                     },
                                     RespValue::None => {
-                                        stream.write(b"$-1\r\n").await.map_err(|e| TransientError::IOError { error: e })?;
+                                        stream.write(b"$-1\r\n").await.map_err(|e| {
+                                            TransientError::IOError {
+                                                error: e
+                                            }
+                                        })?;
                                     }
                                 };
                             }
