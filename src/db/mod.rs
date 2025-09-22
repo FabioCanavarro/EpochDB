@@ -33,10 +33,7 @@ use sled::transaction::{
     TransactionError,
     Transactional
 };
-use sled::{
-    Config,
-    IVec
-};
+use sled::Config;
 use zip::write::SimpleFileOptions;
 use zip::{
     ZipArchive,
@@ -297,19 +294,22 @@ impl DB {
     ///
     /// This function can return an error if the key does not exist or if there
     /// is an issue with the compare-and-swap operation.
-    pub fn increment_frequency(&self, key: &str) -> Result<(), TransientError> {
+    pub fn increment_frequency(&self, key: &str) -> Result<Option<()>, TransientError> {
         let freq_tree = &self.meta_tree;
         let byte = &key.as_bytes();
 
         loop {
-            let metadata = freq_tree
+            let metadata_opt = freq_tree
                 .get(byte)
                 .map_err(|e| {
                     TransientError::SledError {
                         error: e
                     }
-                })?
-                .ok_or(TransientError::IncretmentError)?;
+                })?;
+            let metadata = match metadata_opt {
+                Some(t) => t,
+                None => return Ok(None)
+            };
             let meta =
                 Metadata::from_u8(&metadata).map_err(|_| TransientError::ParsingFromByteError)?;
             let s = freq_tree.compare_and_swap(
@@ -329,7 +329,7 @@ impl DB {
         }
         Metrics::increment_operations("increment_frequency");
 
-        Ok(())
+        Ok(Some(()))
     }
 
     /// Removes a key-value pair and its associated metadata from the database.

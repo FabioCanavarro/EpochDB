@@ -414,12 +414,24 @@ async fn execute_commands(
         },
         Command::IncrementFrequency => {
             match store.increment_frequency(&key.ok_or(TransientError::InvalidCommand)?) {
-                Ok(_) => {
-                    stream.write_all(b"+OK\r\n").await.map_err(|e| {
-                        TransientError::IOError {
-                            error: e
+                Ok(t) => {
+                    match t {
+                        Some(_) => {
+                            stream.write_all(b"+OK\r\n").await.map_err(|e| {
+                                TransientError::IOError {
+                                    error: e
+                                }
+                            })?
+                        },
+                        None => {
+                            stream.write_all(b"$-1\r\n").await.map_err(|e| {
+                                TransientError::IOError {
+                                    error: e
+                                }
+                            })?
                         }
-                    })?
+
+                    }
                 },
                 Err(e) => {
                     stream
