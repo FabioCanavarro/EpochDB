@@ -299,13 +299,11 @@ impl DB {
         let byte = &key.as_bytes();
 
         loop {
-            let metadata_opt = freq_tree
-                .get(byte)
-                .map_err(|e| {
-                    TransientError::SledError {
-                        error: e
-                    }
-                })?;
+            let metadata_opt = freq_tree.get(byte).map_err(|e| {
+                TransientError::SledError {
+                    error: e
+                }
+            })?;
             let metadata = match metadata_opt {
                 Some(t) => t,
                 None => return Ok(None)

@@ -429,8 +429,7 @@ async fn execute_commands(
                                     error: e
                                 }
                             })?
-                        }
-
+                        },
                     }
                 },
                 Err(e) => {
