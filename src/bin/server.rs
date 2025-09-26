@@ -4,6 +4,7 @@ use std::str::from_utf8;
 use std::sync::Arc;
 use std::time::Duration;
 
+
 use epoch_db::db::errors::TransientError;
 use epoch_db::metadata::RespValue;
 use epoch_db::DB;
@@ -23,6 +24,7 @@ use tokio::net::{
     TcpStream
 };
 use tokio::spawn;
+use tracing::{debug, error, info, warn};
 
 #[allow(dead_code)]
 struct ParsedResponse {
@@ -77,9 +79,9 @@ async fn response_handler(mut stream: TcpStream, store: Arc<DB>) -> Result<(), T
     let (reader, writer) = stream.split();
 
     let mut bufreader = BufReader::new(reader);
-    let cmd = parse_command(&mut bufreader).await.unwrap();
+    let cmd = parse_command(&mut bufreader).await?;
     let mut bufwriter = BufWriter::new(writer);
-    let _feedback = execute_commands(cmd, store, &mut bufwriter);
+    execute_commands(cmd, store, &mut bufwriter).await?;
 
     Ok(())
 }
