@@ -5,7 +5,6 @@ use std::str::from_utf8;
 use std::sync::Arc;
 use std::time::Duration;
 
-
 use epoch_db::db::errors::TransientError;
 use epoch_db::metadata::RespValue;
 use epoch_db::DB;
@@ -25,9 +24,20 @@ use tokio::net::{
     TcpStream
 };
 use tokio::spawn;
-use tokio::time::{sleep, Sleep};
-use tracing::{debug, error, info, warn};
-use tracing_subscriber::{fmt, EnvFilter};
+use tokio::time::{
+    sleep,
+    Sleep
+};
+use tracing::{
+    debug,
+    error,
+    info,
+    warn
+};
+use tracing_subscriber::{
+    fmt,
+    EnvFilter
+};
 
 #[allow(dead_code)]
 struct ParsedResponse {
@@ -82,12 +92,12 @@ fn init_logger() {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     init_logger();
-    
+
     // TODO: Make this configurable
     let addr = "localhost:3001";
     let mut counter: i8 = 0;
     let listener = TcpListener::bind(addr).await?;
-    info!("Listening to {}",addr);
+    info!("Listening to {}", addr);
 
     // TODO: LAZY STATIC DB
     let store = Arc::new(DB::new(&PathBuf::from("./")).unwrap()); // TODO: Make path configurable
@@ -113,14 +123,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
                             error!("Error: {:?}", e);
                             warn!("Retry attempt: {:?}", counter);
 
-                            counter +=1;
-                            sleep(Duration::new(0, 	100000000)).await;
+                            counter += 1;
+                            sleep(Duration::new(0, 100000000)).await;
                             continue;
+                        } else {
+                            panic!("An Error occured: {:?}", e);
                         }
-                        else {
-                            panic!("An Error occured: {:?}",e);
-                        }
-                        
                     }
                 }
             }
