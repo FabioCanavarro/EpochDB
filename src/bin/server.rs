@@ -1,3 +1,4 @@
+use std::env::Args;
 use std::error::Error;
 use std::io;
 use std::path::PathBuf;
@@ -89,20 +90,22 @@ fn init_logger() {
 async fn main() -> Result<(), Box<dyn Error>> {
     init_logger();
 
+    let mut counter: i8 = 0;
+
     // TODO: Make this configurable
     let addr = "localhost:3001";
-    let mut counter: i8 = 0;
     let listener = TcpListener::bind(addr).await?;
     info!("Listening to {}", addr);
 
     // TODO: LAZY STATIC DB
-    let store = Arc::new(DB::new(&PathBuf::from("./")).unwrap()); // TODO: Make path configurable
+    let store = Arc::new(DB::new(&PathBuf::from("./"))?); // TODO: Make path configurable
 
     loop {
-        let stream_set = match listener.accept().await {
+        let stream_set = listener.accept().await;
+        match stream_set {
             Ok(t) => {
                 counter = 0;
-                t
+                let _handler = spawn(response_handler(t.0, store.clone()));
             },
             Err(e) => {
                 match e.kind() {
@@ -131,7 +134,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 }
             }
         };
-        let _handler = spawn(response_handler(stream_set.0, store.clone()));
     }
     Ok(())
 }
@@ -139,12 +141,23 @@ async fn main() -> Result<(), Box<dyn Error>> {
 async fn response_handler(mut stream: TcpStream, store: Arc<DB>) -> Result<(), TransientError> {
     let (reader, writer) = stream.split();
 
-    let mut bufreader = BufReader::new(reader);
-    let cmd = parse_command(&mut bufreader).await?;
-    let mut bufwriter = BufWriter::new(writer);
-    execute_commands(cmd, store, &mut bufwriter).await?;
+    let closure: Result<(), TransientError> = async { 
+        let mut bufreader = BufReader::new(reader);
+        let cmd = parse_command(&mut bufreader).await?;
 
-    Ok(())
+        let mut bufwriter = BufWriter::new(writer);
+        execute_commands(cmd, store, &mut bufwriter).await?;
+
+        Ok(())
+    }.await;
+    
+    match closure {
+        ok(_) => ok(()),
+        err(e) => {
+            error!("error: {:?}", e);
+            err(e)
+        }
+    }
 }
 
 /// Parses a single RESP command from the stream
