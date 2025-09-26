@@ -24,12 +24,8 @@ use tokio::net::{
     TcpStream
 };
 use tokio::spawn;
-use tokio::time::{
-    sleep,
-    Sleep
-};
+use tokio::time::sleep;
 use tracing::{
-    debug,
     error,
     info,
     warn
@@ -101,6 +97,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // TODO: LAZY STATIC DB
     let store = Arc::new(DB::new(&PathBuf::from("./")).unwrap()); // TODO: Make path configurable
+
     loop {
         let stream_set = match listener.accept().await {
             Ok(t) => {
@@ -111,11 +108,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 match e.kind() {
                     io::ErrorKind::ConnectionRefused => {
                         warn!("Connection Refused!!!");
-                        continue;
+                        continue
                     },
                     io::ErrorKind::ConnectionAborted => {
                         warn!("Connection Aborted!!!");
-                        continue;
+                        continue
                     },
                     _ => {
                         //TODO: test 10 times sleep 100ms, if error then break and log?
@@ -125,9 +122,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
                             counter += 1;
                             sleep(Duration::new(0, 100000000)).await;
-                            continue;
+                            continue
                         } else {
-                            panic!("An Error occured: {:?}", e);
+                            error!("An Error occured: {:?}", e);
+                            break
                         }
                     }
                 }
@@ -135,6 +133,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         };
         let _handler = spawn(response_handler(stream_set.0, store.clone()));
     }
+    Ok(())
 }
 
 async fn response_handler(mut stream: TcpStream, store: Arc<DB>) -> Result<(), TransientError> {
