@@ -1,4 +1,5 @@
 use std::error::Error;
+use std::io;
 use std::path::PathBuf;
 use std::str::from_utf8;
 use std::sync::Arc;
@@ -24,7 +25,9 @@ use tokio::net::{
     TcpStream
 };
 use tokio::spawn;
+use tokio::time::{sleep, Sleep};
 use tracing::{debug, error, info, warn};
+use tracing_subscriber::{fmt, EnvFilter};
 
 #[allow(dead_code)]
 struct ParsedResponse {
@@ -63,15 +66,66 @@ impl From<String> for Command {
     }
 }
 
+fn init_logger() {
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+
+    fmt()
+        .with_env_filter(filter)
+        .with_writer(std::io::stdout)
+        .with_ansi(true)
+        .with_line_number(true)
+        .with_target(true)
+        .compact()
+        .init();
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    // TODO: LAZY STATIC DB
+    init_logger();
+    
+    // TODO: Make this configurable
     let addr = "localhost:3001";
+    let mut counter: i8 = 0;
     let listener = TcpListener::bind(addr).await?;
-    let store = Arc::new(DB::new(&PathBuf::from("./")).unwrap()); // TODO: CHANGE THIS TO USE CLI
+    info!("Listening to {}",addr);
+
+    // TODO: LAZY STATIC DB
+    let store = Arc::new(DB::new(&PathBuf::from("./")).unwrap()); // TODO: Make path configurable
     loop {
-        let stream = listener.accept();
-        let _handler = spawn(response_handler(stream.await?.0, store.clone()));
+        let stream_set = match listener.accept().await {
+            Ok(t) => {
+                counter = 0;
+                t
+            },
+            Err(e) => {
+                match e.kind() {
+                    io::ErrorKind::ConnectionRefused => {
+                        warn!("Connection Refused!!!");
+                        continue;
+                    },
+                    io::ErrorKind::ConnectionAborted => {
+                        warn!("Connection Aborted!!!");
+                        continue;
+                    },
+                    _ => {
+                        //TODO: test 10 times sleep 100ms, if error then break and log?
+                        if counter < 10 {
+                            error!("Error: {:?}", e);
+                            warn!("Retry attempt: {:?}", counter);
+
+                            counter +=1;
+                            sleep(Duration::new(0, 	100000000)).await;
+                            continue;
+                        }
+                        else {
+                            panic!("An Error occured: {:?}",e);
+                        }
+                        
+                    }
+                }
+            }
+        };
+        let _handler = spawn(response_handler(stream_set.0, store.clone()));
     }
 }
 
@@ -487,4 +541,5 @@ async fn execute_commands(
  *   - Check highest freq
  *   - Check amount of ttl keys
  *   - Be able to Get, Set, rm directly from server for speed
+ *   - Use Prometheus instead of the exporter
  */
