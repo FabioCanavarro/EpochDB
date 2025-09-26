@@ -139,23 +139,39 @@ async fn main() -> Result<(), Box<dyn Error>> {
 }
 
 async fn response_handler(mut stream: TcpStream, store: Arc<DB>) -> Result<(), TransientError> {
-    let (reader, writer) = stream.split();
+    let (reader, mut writer) = stream.split();
 
     let closure: Result<(), TransientError> = async { 
         let mut bufreader = BufReader::new(reader);
-        let cmd = parse_command(&mut bufreader).await?;
+        let cmd_err = parse_command(&mut bufreader).await;
 
-        let mut bufwriter = BufWriter::new(writer);
-        execute_commands(cmd, store, &mut bufwriter).await?;
+        match cmd_err {
+            Ok(cmd) => {
+                let mut bufwriter = BufWriter::new(writer);
+                execute_commands(cmd, store, &mut bufwriter).await?;
+            },
+            Err(e) => {
+                writer
+                        .write_all(b"-ERR Internal Error Occured\r\n")
+                        .await
+                        .map_err(|e| {
+                            TransientError::IOError {
+                                error: e
+                            }
+                        })?;
+                Err(e)?;
+            }
+        }
+
 
         Ok(())
     }.await;
     
     match closure {
-        ok(_) => ok(()),
-        err(e) => {
+        Ok(_) => Ok(()),
+        Err(e) => {
             error!("error: {:?}", e);
-            err(e)
+            Err(e)
         }
     }
 }
