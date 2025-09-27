@@ -111,11 +111,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 match e.kind() {
                     io::ErrorKind::ConnectionRefused => {
                         warn!("Connection Refused!!!");
-                        continue
+                        continue;
                     },
                     io::ErrorKind::ConnectionAborted => {
                         warn!("Connection Aborted!!!");
-                        continue
+                        continue;
                     },
                     _ => {
                         //TODO: test 10 times sleep 100ms, if error then break and log?
@@ -125,10 +125,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
                             counter += 1;
                             sleep(Duration::new(0, 100000000)).await;
-                            continue
+                            continue;
                         } else {
                             error!("An Error occured: {:?}", e);
-                            break
+                            break;
                         }
                     }
                 }
@@ -139,7 +139,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
 }
 
 async fn response_handler(mut stream: TcpStream, store: Arc<DB>) -> Result<(), TransientError> {
-
     let (reader, writer) = stream.split();
     let mut bufreader = BufReader::new(reader);
     let mut bufwriter = BufWriter::new(writer);
@@ -154,41 +153,40 @@ async fn response_handler(mut stream: TcpStream, store: Arc<DB>) -> Result<(), T
                         match e {
                             TransientError::InvalidCommand => {
                                 bufwriter
-                                        .write_all(b"-ERR Wrong command issued\r\n")
-                                        .await
-                                        .map_err(|e| {
-                                            TransientError::IOError {
-                                                error: e
-                                            }
-                                        })?;
-                            }
+                                    .write_all(b"-ERR Wrong command issued\r\n")
+                                    .await
+                                    .map_err(|e| {
+                                        TransientError::IOError {
+                                            error: e
+                                        }
+                                    })?;
+                            },
                             _ => {
                                 error!("error: {:?}", e);
                                 return Err(e);
                             }
                         }
-                    }
+                    },
                 }
             },
             Err(e) => {
                 match e {
                     TransientError::InvalidCommand => {
                         bufwriter
-                                .write_all(b"-ERR Wrong command issued\r\n")
-                                .await
-                                .map_err(|e| {
-                                    TransientError::IOError {
-                                        error: e
-                                    }
-                                })?;
-                    }
+                            .write_all(b"-ERR Wrong command issued\r\n")
+                            .await
+                            .map_err(|e| {
+                                TransientError::IOError {
+                                    error: e
+                                }
+                            })?;
+                    },
                     _ => {
                         error!("error: {:?}", e);
                         return Err(e);
                     }
                 }
-                
-            }
+            },
         }
     }
 }
