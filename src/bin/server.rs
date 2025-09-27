@@ -144,34 +144,51 @@ async fn response_handler(mut stream: TcpStream, store: Arc<DB>) -> Result<(), T
     let mut bufreader = BufReader::new(reader);
     let mut bufwriter = BufWriter::new(writer);
 
-    let closure: Result<(), TransientError> = async move { 
+    loop {
         let cmd_err = parse_command(&mut bufreader).await;
         match cmd_err {
             Ok(cmd) => {
-                execute_commands(cmd, store, &mut bufwriter).await?;
+                match execute_commands(cmd, store.clone(), &mut bufwriter).await {
+                    Ok(_) => (),
+                    Err(e) => {
+                        match e {
+                            TransientError::InvalidCommand => {
+                                bufwriter
+                                        .write_all(b"-ERR Wrong command issued\r\n")
+                                        .await
+                                        .map_err(|e| {
+                                            TransientError::IOError {
+                                                error: e
+                                            }
+                                        })?;
+                            }
+                            _ => {
+                                error!("error: {:?}", e);
+                                return Err(e);
+                            }
+                        }
+                    }
+                }
             },
             Err(e) => {
-                bufwriter
-                        .write_all(b"-ERR Internal Error Occured\r\n")
-                        .await
-                        .map_err(|e| {
-                            TransientError::IOError {
-                                error: e
-                            }
-                        })?;
-                Err(e)?;
+                match e {
+                    TransientError::InvalidCommand => {
+                        bufwriter
+                                .write_all(b"-ERR Wrong command issued\r\n")
+                                .await
+                                .map_err(|e| {
+                                    TransientError::IOError {
+                                        error: e
+                                    }
+                                })?;
+                    }
+                    _ => {
+                        error!("error: {:?}", e);
+                        return Err(e);
+                    }
+                }
+                
             }
-        }
-
-
-        Ok(())
-    }.await;
-    
-    match closure {
-        Ok(_) => Ok(()),
-        Err(e) => {
-            error!("error: {:?}", e);
-            Err(e)
         }
     }
 }
