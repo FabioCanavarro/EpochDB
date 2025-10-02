@@ -49,7 +49,8 @@ pub enum TransientError {
         error: std::io::Error
     },
     InvalidCommand,
-    ValueNotFound
+    ValueNotFound,
+    ClientDisconnected
 }
 
 impl Display for TransientError {
@@ -82,7 +83,8 @@ impl Display for TransientError {
                 error
             } => writeln!(f, "std IO failed {error}"),
             TransientError::InvalidCommand => writeln!(f, "Command is invalid"),
-            TransientError::ValueNotFound => writeln!(f, "Value is not found")
+            TransientError::ValueNotFound => writeln!(f, "Value is not found"),
+            TransientError::ClientDisconnected => writeln!(f, "Client has disconnected")
         }
     }
 }

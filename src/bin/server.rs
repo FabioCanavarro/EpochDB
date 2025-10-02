@@ -202,6 +202,10 @@ async fn parse_command(
         }
     })?;
 
+    if first_byte == 0 {
+        return Err(TransientError::ClientDisconnected);
+    }
+
     // Expect a "*" for the first command
     if first_byte != b'*' {
         return Err(TransientError::InvalidCommand);
