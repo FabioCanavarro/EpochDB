@@ -172,6 +172,7 @@ async fn response_handler(mut stream: TcpStream, store: Arc<DB>) -> Result<(), T
             Err(e) => {
                 match e {
                     TransientError::InvalidCommand => {
+                        warn!("Client has issued a command with incorrect syntax");
                         bufwriter
                             .write_all(b"-ERR Wrong command issued\r\n")
                             .await
@@ -180,7 +181,11 @@ async fn response_handler(mut stream: TcpStream, store: Arc<DB>) -> Result<(), T
                                     error: e
                                 }
                             })?;
+                        bufwriter.flush().await.map_err(|e| TransientError::IOError { error: e })?;
                     },
+                    TransientError::ClientDisconnected => {
+                        info!("Client has disconnected clearly!")
+                    }
                     _ => {
                         error!("error: {:?}", e);
                         return Err(e);
@@ -196,15 +201,17 @@ async fn response_handler(mut stream: TcpStream, store: Arc<DB>) -> Result<(), T
 async fn parse_command(
     stream: &mut BufReader<ReadHalf<'_>>
 ) -> Result<ParsedResponse, TransientError> {
-    let first_byte = stream.read_u8().await.map_err(|e| {
-        TransientError::IOError {
-            error: e
+    let first_byte = match stream.read_u8().await {
+        Ok(t) => t,
+        Err(e) => {
+            match e.kind() {
+                io::ErrorKind::UnexpectedEof => return Err(TransientError::ClientDisconnected),
+                _ => {
+                    return Err(TransientError::IOError { error: e })
+                }
+            }
         }
-    })?;
-
-    if first_byte == 0 {
-        return Err(TransientError::ClientDisconnected);
-    }
+    };
 
     // Expect a "*" for the first command
     if first_byte != b'*' {
@@ -251,11 +258,19 @@ async fn parse_command(
 /// A helper function to read a line terminated by '\n' and parse it as a u64
 async fn parse_integer(stream: &mut BufReader<ReadHalf<'_>>) -> Result<u64, TransientError> {
     let mut buffer = Vec::new();
-    stream.read_until(b'\n', &mut buffer).await.map_err(|e| {
-        TransientError::IOError {
-            error: e
+    match stream.read_until(b'\n', &mut buffer).await {
+        Ok(_) => (),
+        Err(e) => {
+            match e.kind() {
+                io::ErrorKind::UnexpectedEof => return Err(TransientError::ClientDisconnected),
+                _ => {
+                    return Err(TransientError::IOError { error: e })
+                }
+            }
         }
-    })?;
+    };
+
+
 
     // Check if the byte received contains a "\r\n" in the last 2 char
     if buffer.len() < 2 || &buffer[buffer.len() - 2..] != b"\r\n" {
@@ -276,11 +291,18 @@ async fn parse_integer(stream: &mut BufReader<ReadHalf<'_>>) -> Result<u64, Tran
 
 /// Parses a single Bulk String from the stream (e.g., "$5\r\nhello\r\n")
 async fn parse_bulk_string(stream: &mut BufReader<ReadHalf<'_>>) -> Result<String, TransientError> {
-    let first_byte = stream.read_u8().await.map_err(|e| {
-        TransientError::IOError {
-            error: e
+    let first_byte = match stream.read_u8().await {
+        Ok(t) => t,
+        Err(e) => {
+            match e.kind() {
+                io::ErrorKind::UnexpectedEof => return Err(TransientError::ClientDisconnected),
+                _ => {
+                    return Err(TransientError::IOError { error: e })
+                }
+            }
         }
-    })?;
+    };
+
 
     // Check if the first byte received is a "$"
     if first_byte != b'$' {
