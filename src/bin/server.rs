@@ -1,4 +1,3 @@
-use std::env::Args;
 use std::error::Error;
 use std::io;
 use std::path::PathBuf;
@@ -185,7 +184,18 @@ async fn response_handler(mut stream: TcpStream, store: Arc<DB>) -> Result<(), T
                     },
                     TransientError::ClientDisconnected => {
                         info!("Client has disconnected clearly!")
-                    }
+                    },
+                    TransientError::AboveSizeLimit => {
+                        warn!("Client has issued a command above the size limit");
+                        bufwriter
+                            .write_all(b"-ERR Size of command is above the limit\r\n")
+                            .await
+                            .map_err(|e| {
+                                TransientError::IOError {
+                                    error: e
+                                }
+                            })?;
+                    },
                     _ => {
                         error!("error: {:?}", e);
                         return Err(e);
@@ -221,6 +231,9 @@ async fn parse_command(
     // TODO: After parsing return an error if there is more than 500 mb worth of
     // elements
     let num_elements = parse_integer(stream).await?;
+    if num_elements > 4 {
+        return Err(TransientError::AboveSizeLimit)
+    }
 
     // Collect each element of the command into a vector.
     let mut command_parts = Vec::with_capacity(num_elements as usize);
@@ -314,20 +327,34 @@ async fn parse_bulk_string(stream: &mut BufReader<ReadHalf<'_>>) -> Result<Strin
 
     // Read exactly `len` bytes for the data
     let mut data_buf = vec![0; len as usize];
-    stream.read_exact(&mut data_buf).await.map_err(|e| {
-        TransientError::IOError {
-            error: e
+    match stream.read_exact(&mut data_buf).await {
+        Ok(_) => (),
+        Err(e) => {
+            match e.kind() {
+                io::ErrorKind::UnexpectedEof => return Err(TransientError::ClientDisconnected),
+                _ => {
+                    return Err(TransientError::IOError { error: e })
+                }
+            }
         }
-    })?;
+    };
+
 
     // The data is followed by a final "\r\n". We must consume this
     // Read 2 bytes for the CRLF
     let mut crlf_buf = [0; 2];
-    stream.read_exact(&mut crlf_buf).await.map_err(|e| {
-        TransientError::IOError {
-            error: e
+    match stream.read_exact(&mut crlf_buf).await {
+        Ok(_) => (),
+        Err(e) => {
+            match e.kind() {
+                io::ErrorKind::UnexpectedEof => return Err(TransientError::ClientDisconnected),
+                _ => {
+                    return Err(TransientError::IOError { error: e })
+                }
+            }
         }
-    })?;
+    };    
+
     if crlf_buf != *b"\r\n" {
         return Err(TransientError::InvalidCommand);
     }

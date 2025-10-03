@@ -50,7 +50,8 @@ pub enum TransientError {
     },
     InvalidCommand,
     ValueNotFound,
-    ClientDisconnected
+    ClientDisconnected,
+    AboveSizeLimit
 }
 
 impl Display for TransientError {
@@ -84,7 +85,8 @@ impl Display for TransientError {
             } => writeln!(f, "std IO failed {error}"),
             TransientError::InvalidCommand => writeln!(f, "Command is invalid"),
             TransientError::ValueNotFound => writeln!(f, "Value is not found"),
-            TransientError::ClientDisconnected => writeln!(f, "Client has disconnected")
+            TransientError::ClientDisconnected => writeln!(f, "Client has disconnected"),
+            TransientError::AboveSizeLimit => writeln!(f, "Message received was above the size limit")
         }
     }
 }
