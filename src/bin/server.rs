@@ -231,7 +231,9 @@ async fn parse_command(
     // TODO: After parsing return an error if there is more than 500 mb worth of
     // elements
     let num_elements = parse_integer(stream).await?;
+
     if num_elements > 4 {
+        warn!("Client has issued more than 4 elements: {}", num_elements);
         return Err(TransientError::AboveSizeLimit)
     }
 
@@ -322,8 +324,16 @@ async fn parse_bulk_string(stream: &mut BufReader<ReadHalf<'_>>) -> Result<Strin
         return Err(TransientError::InvalidCommand);
     }
 
+
     // Parse the length of the string
     let len = parse_integer(stream).await?;
+
+    // TODO: Make this configurable by config builder or with option
+    if len >= 4096 {
+        error!("Client has given a bulk string bigger than the limit: {}", len);
+        return Err(TransientError::AboveSizeLimit);
+
+    }
 
     // Read exactly `len` bytes for the data
     let mut data_buf = vec![0; len as usize];
