@@ -86,7 +86,9 @@ impl Display for TransientError {
             TransientError::InvalidCommand => writeln!(f, "Command is invalid"),
             TransientError::ValueNotFound => writeln!(f, "Value is not found"),
             TransientError::ClientDisconnected => writeln!(f, "Client has disconnected"),
-            TransientError::AboveSizeLimit => writeln!(f, "Message received was above the size limit")
+            TransientError::AboveSizeLimit => {
+                writeln!(f, "Message received was above the size limit")
+            },
         }
     }
 }

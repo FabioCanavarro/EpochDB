@@ -35,7 +35,6 @@ use tracing_subscriber::{
     EnvFilter
 };
 
-
 // Constants
 pub const CLIENT_COMMAND_SIZE: u64 = 4096;
 
@@ -184,11 +183,15 @@ async fn response_handler(mut stream: TcpStream, store: Arc<DB>) -> Result<(), T
                                     error: e
                                 }
                             })?;
-                        bufwriter.flush().await.map_err(|e| TransientError::IOError { error: e })?;
+                        bufwriter.flush().await.map_err(|e| {
+                            TransientError::IOError {
+                                error: e
+                            }
+                        })?;
                     },
                     TransientError::ClientDisconnected => {
                         info!("Client has disconnected clearly!");
-                        break
+                        break;
                     },
                     TransientError::AboveSizeLimit => {
                         warn!("Client has issued a command above the size limit");
@@ -223,10 +226,12 @@ async fn parse_command(
             match e.kind() {
                 io::ErrorKind::UnexpectedEof => return Err(TransientError::ClientDisconnected),
                 _ => {
-                    return Err(TransientError::IOError { error: e })
-                }
+                    return Err(TransientError::IOError {
+                        error: e
+                    })
+                },
             }
-        }
+        },
     };
 
     // Expect a "*" for the first command
@@ -238,8 +243,11 @@ async fn parse_command(
     let num_elements = parse_integer(stream).await?;
 
     if num_elements > 4096 {
-        warn!("Client has issued more than 4096 elements: {}", num_elements);
-        return Err(TransientError::AboveSizeLimit)
+        warn!(
+            "Client has issued more than 4096 elements: {}",
+            num_elements
+        );
+        return Err(TransientError::AboveSizeLimit);
     }
 
     // Collect each element of the command into a vector.
@@ -284,13 +292,13 @@ async fn parse_integer(stream: &mut BufReader<ReadHalf<'_>>) -> Result<u64, Tran
             match e.kind() {
                 io::ErrorKind::UnexpectedEof => return Err(TransientError::ClientDisconnected),
                 _ => {
-                    return Err(TransientError::IOError { error: e })
-                }
+                    return Err(TransientError::IOError {
+                        error: e
+                    })
+                },
             }
-        }
+        },
     };
-
-
 
     // Check if the byte received contains a "\r\n" in the last 2 char
     if buffer.len() < 2 || &buffer[buffer.len() - 2..] != b"\r\n" {
@@ -317,27 +325,29 @@ async fn parse_bulk_string(stream: &mut BufReader<ReadHalf<'_>>) -> Result<Strin
             match e.kind() {
                 io::ErrorKind::UnexpectedEof => return Err(TransientError::ClientDisconnected),
                 _ => {
-                    return Err(TransientError::IOError { error: e })
-                }
+                    return Err(TransientError::IOError {
+                        error: e
+                    })
+                },
             }
-        }
+        },
     };
-
 
     // Check if the first byte received is a "$"
     if first_byte != b'$' {
         return Err(TransientError::InvalidCommand);
     }
 
-
     // Parse the length of the string
     let len = parse_integer(stream).await?;
 
     // TODO: Make this configurable by config builder or with option
     if len >= CLIENT_COMMAND_SIZE {
-        error!("Client has given a bulk string bigger than the limit: {}", len);
+        error!(
+            "Client has given a bulk string bigger than the limit: {}",
+            len
+        );
         return Err(TransientError::AboveSizeLimit);
-
     }
 
     // Read exactly `len` bytes for the data
@@ -348,12 +358,13 @@ async fn parse_bulk_string(stream: &mut BufReader<ReadHalf<'_>>) -> Result<Strin
             match e.kind() {
                 io::ErrorKind::UnexpectedEof => return Err(TransientError::ClientDisconnected),
                 _ => {
-                    return Err(TransientError::IOError { error: e })
-                }
+                    return Err(TransientError::IOError {
+                        error: e
+                    })
+                },
             }
-        }
+        },
     };
-
 
     // The data is followed by a final "\r\n". We must consume this
     // Read 2 bytes for the CRLF
@@ -364,11 +375,13 @@ async fn parse_bulk_string(stream: &mut BufReader<ReadHalf<'_>>) -> Result<Strin
             match e.kind() {
                 io::ErrorKind::UnexpectedEof => return Err(TransientError::ClientDisconnected),
                 _ => {
-                    return Err(TransientError::IOError { error: e })
-                }
+                    return Err(TransientError::IOError {
+                        error: e
+                    })
+                },
             }
-        }
-    };    
+        },
+    };
 
     if crlf_buf != *b"\r\n" {
         return Err(TransientError::InvalidCommand);
