@@ -35,6 +35,10 @@ use tracing_subscriber::{
     EnvFilter
 };
 
+
+// Constants
+pub const CLIENT_COMMAND_SIZE: u64 = 4096;
+
 #[allow(dead_code)]
 struct ParsedResponse {
     command: Command,
@@ -183,7 +187,8 @@ async fn response_handler(mut stream: TcpStream, store: Arc<DB>) -> Result<(), T
                         bufwriter.flush().await.map_err(|e| TransientError::IOError { error: e })?;
                     },
                     TransientError::ClientDisconnected => {
-                        info!("Client has disconnected clearly!")
+                        info!("Client has disconnected clearly!");
+                        break
                     },
                     TransientError::AboveSizeLimit => {
                         warn!("Client has issued a command above the size limit");
@@ -204,6 +209,7 @@ async fn response_handler(mut stream: TcpStream, store: Arc<DB>) -> Result<(), T
             },
         }
     }
+    Ok(())
 }
 
 /// Parses a single RESP command from the stream
@@ -228,12 +234,11 @@ async fn parse_command(
         return Err(TransientError::InvalidCommand);
     }
 
-    // TODO: After parsing return an error if there is more than 500 mb worth of
     // elements
     let num_elements = parse_integer(stream).await?;
 
-    if num_elements > 4 {
-        warn!("Client has issued more than 4 elements: {}", num_elements);
+    if num_elements > 4096 {
+        warn!("Client has issued more than 4096 elements: {}", num_elements);
         return Err(TransientError::AboveSizeLimit)
     }
 
@@ -329,7 +334,7 @@ async fn parse_bulk_string(stream: &mut BufReader<ReadHalf<'_>>) -> Result<Strin
     let len = parse_integer(stream).await?;
 
     // TODO: Make this configurable by config builder or with option
-    if len >= 4096 {
+    if len >= CLIENT_COMMAND_SIZE {
         error!("Client has given a bulk string bigger than the limit: {}", len);
         return Err(TransientError::AboveSizeLimit);
 
