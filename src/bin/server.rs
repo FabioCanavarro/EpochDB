@@ -42,7 +42,7 @@ pub const CLIENT_COMMAND_SIZE: u64 = 4096;
 struct ParsedResponse {
     command: Command,
     key: Option<String>,
-    value: Option<String>,
+    value: Option<Vec<u8>>,
     ttl: Option<Duration>,
     len: u32
 }
@@ -621,19 +621,36 @@ async fn execute_commands(
         },
         Command::Get => {
             check_argument(stream, cmd.into(), 2, parsed_reponse.len, None).await?;
-            match store.get(&key.ok_or(TransientError::InvalidCommand)?) {
+            match store.get_raw(&key.ok_or(TransientError::InvalidCommand)?) {
                 Ok(v) => {
                     match v {
                         Some(val) => {
                             let size = val.len();
                             stream
-                                .write_all(format!("${}\r\n{}\r\n", size, val).as_bytes())
+                                .write_all(format!("${}\r\n", size).as_bytes())
+                                .await
+                                .map_err(|e| {
+                                    TransientError::IOError {
+                                        error: e
+                                    }
+                                })?;
+                            stream
+                                .write_all(&val)
+                                .await
+                                .map_err(|e| {
+                                    TransientError::IOError {
+                                        error: e
+                                    }
+                                })?;
+                            stream
+                                .write_all("\r\n".as_bytes())
                                 .await
                                 .map_err(|e| {
                                     TransientError::IOError {
                                         error: e
                                     }
                                 })?
+
                         },
                         None => {
                             stream.write_all(b"$-1\r\n").await.map_err(|e| {

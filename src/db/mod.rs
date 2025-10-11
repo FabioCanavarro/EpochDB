@@ -684,6 +684,26 @@ impl DB {
     pub fn get_db_size(&self) -> usize {
         self.data_tree.len()
     }
+
+    /// Retrieves the raw value for a given key.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the value cannot be retrieved from the database or
+    /// if the value is not valid UTF-8.
+    pub fn get_raw(&self, key: &str) -> Result<Option<Vec<u8>>, TransientError> {
+        let data_tree = &self.data_tree;
+        let byte = key.as_bytes();
+        let val = data_tree.get(byte).map_err(|e| {
+            TransientError::SledError {
+                error: e
+            }
+        });
+
+        Metrics::increment_operations("get");
+
+        val.map(|a| a.map(|b| b.to_vec()))
+    }
 }
 
 impl Drop for DB {
