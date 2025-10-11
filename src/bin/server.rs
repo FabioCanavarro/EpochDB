@@ -1,5 +1,5 @@
 use std::error::Error;
-use std::{io, usize};
+use std::io;
 use std::path::PathBuf;
 use std::str::from_utf8;
 use std::sync::Arc;
@@ -92,9 +92,9 @@ impl From<Command> for String {
     }
 }
 
-async fn check_argument(stream: &mut BufWriter<WriteHalf<'_>>, command: String, expected: u32, parsed_reponse: &ParsedResponse) -> Result<(), TransientError> {
-    if parsed_reponse.len > expected {
-        let err = TransientError::WrongNumberOfArguments { command: command.into(), expected, received: parsed_reponse.len };
+async fn check_argument(stream: &mut BufWriter<WriteHalf<'_>>, command: String, expected: u32, received: u32) -> Result<(), TransientError> {
+    if received > expected {
+        let err = TransientError::WrongNumberOfArguments { command: command.into(), expected, received };
         stream
                 .write_all(format!("-ERR {}\r\n", err).as_bytes())
                 .await
@@ -438,7 +438,7 @@ async fn execute_commands(
     // WARNING: dont use e
     match cmd {
         Command::Set => {
-            check_argument(stream, cmd.into(), 4, &parsed_reponse);
+            check_argument(stream, cmd.into(), 4, parsed_reponse.len).await?;
             match store.set(
                 &key.ok_or(TransientError::InvalidCommand)?,
                 &val.ok_or(TransientError::InvalidCommand)?,
@@ -464,7 +464,7 @@ async fn execute_commands(
             };
         },
         Command::GetMetadata => {
-            check_argument(stream, cmd.into(), 2, &parsed_reponse);
+            check_argument(stream, cmd.into(), 2, parsed_reponse.len).await?;
             match store.get_metadata(&key.ok_or(TransientError::InvalidCommand)?) {
                 Ok(v) => {
                     match v {
@@ -557,7 +557,7 @@ async fn execute_commands(
             }
         },
         Command::Rm => {
-            check_argument(stream, cmd.into(), 2, &parsed_reponse);
+            check_argument(stream, cmd.into(), 2, parsed_reponse.len).await?;
             match store.remove(&key.ok_or(TransientError::InvalidCommand)?) {
                 Ok(_) => {
                     stream.write_all(b"+OK\r\n").await.map_err(|e| {
@@ -581,7 +581,7 @@ async fn execute_commands(
             todo!()
         },
         Command::Flush => {
-            check_argument(stream, cmd.into(), 1, &parsed_reponse);
+            check_argument(stream, cmd.into(), 1, parsed_reponse.len).await?;
             match store.flush() {
                 Ok(_) => {
                     stream.write_all(b"+OK\r\n").await.map_err(|e| {
@@ -603,7 +603,7 @@ async fn execute_commands(
             };
         },
         Command::Get => {
-            check_argument(stream, cmd.into(), 2, &parsed_reponse);
+            check_argument(stream, cmd.into(), 2, parsed_reponse.len).await?;
             match store.get(&key.ok_or(TransientError::InvalidCommand)?) {
                 Ok(v) => {
                     match v {
@@ -640,7 +640,7 @@ async fn execute_commands(
             }
         },
         Command::IncrementFrequency => {
-            check_argument(stream, cmd.into(), 2, &parsed_reponse);
+            check_argument(stream, cmd.into(), 2, parsed_reponse.len).await?;
             match store.increment_frequency(&key.ok_or(TransientError::InvalidCommand)?) {
                 Ok(t) => {
                     match t {
@@ -673,7 +673,7 @@ async fn execute_commands(
             };
         },
         Command::Ping => {
-            check_argument(stream, cmd.into(), 1, &parsed_reponse);
+            check_argument(stream, cmd.into(), 1, parsed_reponse.len).await?;
             stream.write_all(b"+PONG\r\n").await.map_err(|e| {
                 TransientError::IOError {
                     error: e
@@ -681,7 +681,7 @@ async fn execute_commands(
             })?
         },
         Command::Size => {
-            check_argument(stream, cmd.into(), 1, &parsed_reponse);
+            check_argument(stream, cmd.into(), 1, parsed_reponse.len).await?;
             let size = store.get_db_size();
             stream
                 .write_all(format!(":{}\r\n", size).as_bytes())
