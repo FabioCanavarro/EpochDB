@@ -52,7 +52,11 @@ pub enum TransientError {
     ValueNotFound,
     ClientDisconnected,
     AboveSizeLimit,
-    WrongNumberOfArguments {command: String, expected: u32, received: u32}
+    WrongNumberOfArguments {
+        command: String,
+        expected: u32,
+        received: u32
+    }
 }
 
 impl Display for TransientError {

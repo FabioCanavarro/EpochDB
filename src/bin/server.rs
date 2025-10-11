@@ -92,10 +92,20 @@ impl From<Command> for String {
     }
 }
 
-async fn check_argument(stream: &mut BufWriter<WriteHalf<'_>>, command: String, expected: u32, received: u32, min_expected: Option<u32>) -> Result<(), TransientError> {
+async fn check_argument(
+    stream: &mut BufWriter<WriteHalf<'_>>,
+    command: String,
+    expected: u32,
+    received: u32,
+    min_expected: Option<u32>
+) -> Result<(), TransientError> {
     if let Some(min) = min_expected {
         if received < min {
-            let err = TransientError::WrongNumberOfArguments { command: command.clone(), expected: min, received };
+            let err = TransientError::WrongNumberOfArguments {
+                command: command.clone(),
+                expected: min,
+                received
+            };
             error!("Error {:?}", err);
             stream
                 .write_all(format!("-ERR Wrong number of arguments for \"{command}\" command; Needed at least {expected} arguments, Received {received} arguments\r\n").as_bytes())
@@ -106,9 +116,12 @@ async fn check_argument(stream: &mut BufWriter<WriteHalf<'_>>, command: String, 
                     }
                 })?
         }
-    }
-    else if received > expected {
-        let err = TransientError::WrongNumberOfArguments { command: command.clone(), expected, received };
+    } else if received > expected {
+        let err = TransientError::WrongNumberOfArguments {
+            command: command.clone(),
+            expected,
+            received
+        };
         error!("Error {:?}", err);
         stream
                 .write_all(format!("-ERR Wrong number of arguments for \"{command}\" command; Needed at most {expected} arguments, Received {received} arguments\r\n").as_bytes())
@@ -120,9 +133,7 @@ async fn check_argument(stream: &mut BufWriter<WriteHalf<'_>>, command: String, 
                 })?
     }
 
-    
     Ok(())
-
 }
 
 fn init_logger() {
@@ -634,23 +645,16 @@ async fn execute_commands(
                                         error: e
                                     }
                                 })?;
-                            stream
-                                .write_all(&val)
-                                .await
-                                .map_err(|e| {
-                                    TransientError::IOError {
-                                        error: e
-                                    }
-                                })?;
-                            stream
-                                .write_all("\r\n".as_bytes())
-                                .await
-                                .map_err(|e| {
-                                    TransientError::IOError {
-                                        error: e
-                                    }
-                                })?
-
+                            stream.write_all(&val).await.map_err(|e| {
+                                TransientError::IOError {
+                                    error: e
+                                }
+                            })?;
+                            stream.write_all("\r\n".as_bytes()).await.map_err(|e| {
+                                TransientError::IOError {
+                                    error: e
+                                }
+                            })?
                         },
                         None => {
                             stream.write_all(b"$-1\r\n").await.map_err(|e| {
