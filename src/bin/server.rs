@@ -92,11 +92,26 @@ impl From<Command> for String {
     }
 }
 
-async fn check_argument(stream: &mut BufWriter<WriteHalf<'_>>, command: String, expected: u32, received: u32) -> Result<(), TransientError> {
-    if received > expected {
-        let err = TransientError::WrongNumberOfArguments { command: command.into(), expected, received };
+async fn check_argument(stream: &mut BufWriter<WriteHalf<'_>>, command: String, expected: u32, received: u32, min_expected: Option<u32>) -> Result<(), TransientError> {
+    if let Some(min) = min_expected {
+        if received < min {
+            let err = TransientError::WrongNumberOfArguments { command: command.clone(), expected: min, received };
+            error!("Error {:?}", err);
+            stream
+                .write_all(format!("-ERR Wrong number of arguments for \"{command}\" command; Needed at least {expected} arguments, Received {received} arguments\r\n").as_bytes())
+                .await
+                .map_err(|e| {
+                    TransientError::IOError {
+                        error: e
+                    }
+                })?
+        }
+    }
+    else if received > expected {
+        let err = TransientError::WrongNumberOfArguments { command: command.clone(), expected, received };
+        error!("Error {:?}", err);
         stream
-                .write_all(format!("-ERR {}\r\n", err).as_bytes())
+                .write_all(format!("-ERR Wrong number of arguments for \"{command}\" command; Needed at most {expected} arguments, Received {received} arguments\r\n").as_bytes())
                 .await
                 .map_err(|e| {
                     TransientError::IOError {
@@ -104,6 +119,8 @@ async fn check_argument(stream: &mut BufWriter<WriteHalf<'_>>, command: String, 
                     }
                 })?
     }
+
+    
     Ok(())
 
 }
@@ -438,7 +455,7 @@ async fn execute_commands(
     // WARNING: dont use e
     match cmd {
         Command::Set => {
-            check_argument(stream, cmd.into(), 4, parsed_reponse.len).await?;
+            check_argument(stream, cmd.into(), 4, parsed_reponse.len, Some(3)).await?;
             match store.set(
                 &key.ok_or(TransientError::InvalidCommand)?,
                 &val.ok_or(TransientError::InvalidCommand)?,
@@ -464,7 +481,7 @@ async fn execute_commands(
             };
         },
         Command::GetMetadata => {
-            check_argument(stream, cmd.into(), 2, parsed_reponse.len).await?;
+            check_argument(stream, cmd.into(), 2, parsed_reponse.len, None).await?;
             match store.get_metadata(&key.ok_or(TransientError::InvalidCommand)?) {
                 Ok(v) => {
                     match v {
@@ -557,7 +574,7 @@ async fn execute_commands(
             }
         },
         Command::Rm => {
-            check_argument(stream, cmd.into(), 2, parsed_reponse.len).await?;
+            check_argument(stream, cmd.into(), 2, parsed_reponse.len, None).await?;
             match store.remove(&key.ok_or(TransientError::InvalidCommand)?) {
                 Ok(_) => {
                     stream.write_all(b"+OK\r\n").await.map_err(|e| {
@@ -581,7 +598,7 @@ async fn execute_commands(
             todo!()
         },
         Command::Flush => {
-            check_argument(stream, cmd.into(), 1, parsed_reponse.len).await?;
+            check_argument(stream, cmd.into(), 1, parsed_reponse.len, None).await?;
             match store.flush() {
                 Ok(_) => {
                     stream.write_all(b"+OK\r\n").await.map_err(|e| {
@@ -603,7 +620,7 @@ async fn execute_commands(
             };
         },
         Command::Get => {
-            check_argument(stream, cmd.into(), 2, parsed_reponse.len).await?;
+            check_argument(stream, cmd.into(), 2, parsed_reponse.len, None).await?;
             match store.get(&key.ok_or(TransientError::InvalidCommand)?) {
                 Ok(v) => {
                     match v {
@@ -640,7 +657,7 @@ async fn execute_commands(
             }
         },
         Command::IncrementFrequency => {
-            check_argument(stream, cmd.into(), 2, parsed_reponse.len).await?;
+            check_argument(stream, cmd.into(), 2, parsed_reponse.len, None).await?;
             match store.increment_frequency(&key.ok_or(TransientError::InvalidCommand)?) {
                 Ok(t) => {
                     match t {
@@ -673,7 +690,7 @@ async fn execute_commands(
             };
         },
         Command::Ping => {
-            check_argument(stream, cmd.into(), 1, parsed_reponse.len).await?;
+            check_argument(stream, cmd.into(), 1, parsed_reponse.len, None).await?;
             stream.write_all(b"+PONG\r\n").await.map_err(|e| {
                 TransientError::IOError {
                     error: e
@@ -681,7 +698,7 @@ async fn execute_commands(
             })?
         },
         Command::Size => {
-            check_argument(stream, cmd.into(), 1, parsed_reponse.len).await?;
+            check_argument(stream, cmd.into(), 1, parsed_reponse.len, None).await?;
             let size = store.get_db_size();
             stream
                 .write_all(format!(":{}\r\n", size).as_bytes())
