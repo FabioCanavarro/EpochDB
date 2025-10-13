@@ -41,7 +41,7 @@ pub const CLIENT_COMMAND_SIZE: u64 = 4096;
 #[allow(dead_code)]
 struct ParsedResponse {
     command: Command,
-    key: Option<String>,
+    key: Option<Vec<u8>>,
     value: Option<Vec<u8>>,
     ttl: Option<Duration>,
     len: u32
@@ -380,7 +380,7 @@ async fn parse_integer(stream: &mut BufReader<ReadHalf<'_>>) -> Result<u64, Tran
 }
 
 /// Parses a single Bulk String from the stream (e.g., "$5\r\nhello\r\n")
-async fn parse_bulk_string(stream: &mut BufReader<ReadHalf<'_>>) -> Result<String, TransientError> {
+async fn parse_bulk_string(stream: &mut BufReader<ReadHalf<'_>>) -> Result<Vec<u8>, TransientError> {
     let first_byte = match stream.read_u8().await {
         Ok(t) => t,
         Err(e) => {
@@ -450,7 +450,7 @@ async fn parse_bulk_string(stream: &mut BufReader<ReadHalf<'_>>) -> Result<Strin
     }
 
     // Convert the data bytes to a String
-    String::from_utf8(data_buf).map_err(|_| TransientError::ParsingToUTF8Error)
+    Ok(data_buf)
 }
 
 async fn execute_commands(
@@ -467,7 +467,7 @@ async fn execute_commands(
     match cmd {
         Command::Set => {
             check_argument(stream, cmd.into(), 4, parsed_reponse.len, Some(3)).await?;
-            match store.set(
+            match store.set_raw(
                 &key.ok_or(TransientError::InvalidCommand)?,
                 &val.ok_or(TransientError::InvalidCommand)?,
                 ttl
@@ -493,7 +493,7 @@ async fn execute_commands(
         },
         Command::GetMetadata => {
             check_argument(stream, cmd.into(), 2, parsed_reponse.len, None).await?;
-            match store.get_metadata(&key.ok_or(TransientError::InvalidCommand)?) {
+            match store.get_metadata_raw(&key.ok_or(TransientError::InvalidCommand)?) {
                 Ok(v) => {
                     match v {
                         Some(val) => {
@@ -586,7 +586,7 @@ async fn execute_commands(
         },
         Command::Rm => {
             check_argument(stream, cmd.into(), 2, parsed_reponse.len, None).await?;
-            match store.remove(&key.ok_or(TransientError::InvalidCommand)?) {
+            match store.remove_raw(&key.ok_or(TransientError::InvalidCommand)?) {
                 Ok(_) => {
                     stream.write_all(b"+OK\r\n").await.map_err(|e| {
                         TransientError::IOError {
@@ -679,7 +679,7 @@ async fn execute_commands(
         },
         Command::IncrementFrequency => {
             check_argument(stream, cmd.into(), 2, parsed_reponse.len, None).await?;
-            match store.increment_frequency(&key.ok_or(TransientError::InvalidCommand)?) {
+            match store.increment_frequency_raw(&key.ok_or(TransientError::InvalidCommand)?) {
                 Ok(t) => {
                     match t {
                         Some(_) => {
