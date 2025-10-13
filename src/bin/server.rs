@@ -319,18 +319,18 @@ async fn parse_command(
     }
 
     // Map the raw command parts to ParsedResponse struct
-    let command_str = command_parts
-        .first()
-        .ok_or(TransientError::InvalidCommand)?
+    let command_raw = from_utf8(command_parts.first().ok_or(TransientError::InvalidCommand)?).map_err(|_| TransientError::ParsingToUTF8Error)?;
+    let command_str = command_raw
         .to_uppercase();
     let command = Command::from(command_str);
     let key = command_parts.get(1).cloned();
     let value = command_parts.get(2).cloned();
-    let ttl = if let Some(ttl_str) = command_parts.get(3) {
+    let ttl = if let Some(ttl_raw) = command_parts.get(3) {
         Some(Duration::from_millis(
-            ttl_str
-                .parse::<u64>()
-                .map_err(|_| TransientError::ParsingToU64ByteFailed)?
+            {
+                let ttl_byte: [u8; 8] = ttl_raw[..].try_into().map_err(|_| TransientError::ParsingToU64ByteFailed)?;
+                u64::from_be_bytes(ttl_byte)
+            }
         )) // TODO: CONFIG BUILDER LOL
     } else {
         None
