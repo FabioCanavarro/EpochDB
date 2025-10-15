@@ -285,7 +285,7 @@ async fn parse_command(
                     return Err(TransientError::IOError {
                         error: e
                     });
-                },
+                }
             }
         },
     };
@@ -358,7 +358,7 @@ async fn parse_integer(stream: &mut BufReader<ReadHalf<'_>>) -> Result<u64, Tran
                     return Err(TransientError::IOError {
                         error: e
                     });
-                },
+                }
             }
         },
     };
@@ -393,7 +393,7 @@ async fn parse_bulk_string(
                     return Err(TransientError::IOError {
                         error: e
                     });
-                },
+                }
             }
         },
     };
@@ -426,7 +426,7 @@ async fn parse_bulk_string(
                     return Err(TransientError::IOError {
                         error: e
                     });
-                },
+                }
             }
         },
     };
@@ -443,7 +443,7 @@ async fn parse_bulk_string(
                     return Err(TransientError::IOError {
                         error: e
                     });
-                },
+                }
             }
         },
     };
