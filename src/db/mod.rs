@@ -714,7 +714,12 @@ impl DB {
     ///
     /// This function can return an error if there's an issue with the
     /// underlying
-    pub fn set_raw(&self, key: &[u8], val: &[u8], ttl: Option<Duration>) -> Result<(), TransientError> {
+    pub fn set_raw(
+        &self,
+        key: &[u8],
+        val: &[u8],
+        ttl: Option<Duration>
+    ) -> Result<(), TransientError> {
         let data_tree = &self.data_tree;
         let freq_tree = &self.meta_tree;
         let ttl_tree = &self.ttl_tree;
@@ -797,7 +802,8 @@ impl DB {
         }
     }
 
-    /// Removes a raw key-value pair and its associated metadata from the database.
+    /// Removes a raw key-value pair and its associated metadata from the
+    /// database.
     ///
     /// # Errors
     ///
@@ -877,7 +883,6 @@ impl DB {
 
         Ok(Some(()))
     }
-
 }
 
 impl Drop for DB {

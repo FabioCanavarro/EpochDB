@@ -94,7 +94,11 @@ impl Display for TransientError {
             TransientError::AboveSizeLimit => {
                 writeln!(f, "Message received was above the size limit")
             },
-            TransientError::WrongNumberOfArguments { command, expected, received } => {
+            TransientError::WrongNumberOfArguments {
+                command,
+                expected,
+                received
+            } => {
                 writeln!(f, "Wrong number of arguments for \"{command}\" command; Needed {expected} arguments, Received {received} arguments")
             }
         }
