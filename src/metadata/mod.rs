@@ -6,6 +6,7 @@ use std::time::{
     SystemTime,
     UNIX_EPOCH
 };
+use std::vec;
 
 use bincode::error::{
     DecodeError,
@@ -63,4 +64,24 @@ impl Metadata {
     pub fn from_u8(slice: &[u8]) -> Result<Metadata, DecodeError> {
         Ok(decode_from_slice(slice, bincode::config::standard())?.0)
     }
+
+    pub fn to_response(&self) -> Vec<(String, RespValue)> {
+        vec![
+            ("frequency".to_string(), RespValue::U64(self.freq)),
+            ("created_at".to_string(), RespValue::U64(self.created_at)),
+            (
+                "ttl".to_string(),
+                match self.ttl {
+                    Some(t) => RespValue::U64(t),
+                    None => RespValue::None
+                }
+            ),
+        ]
+    }
+}
+
+pub enum RespValue {
+    U64(u64),
+    BulkString(Vec<u8>),
+    None
 }

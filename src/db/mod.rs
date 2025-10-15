@@ -294,19 +294,20 @@ impl DB {
     ///
     /// This function can return an error if the key does not exist or if there
     /// is an issue with the compare-and-swap operation.
-    pub fn increment_frequency(&self, key: &str) -> Result<(), TransientError> {
+    pub fn increment_frequency(&self, key: &str) -> Result<Option<()>, TransientError> {
         let freq_tree = &self.meta_tree;
         let byte = &key.as_bytes();
 
         loop {
-            let metadata = freq_tree
-                .get(byte)
-                .map_err(|e| {
-                    TransientError::SledError {
-                        error: e
-                    }
-                })?
-                .ok_or(TransientError::IncretmentError)?;
+            let metadata_opt = freq_tree.get(byte).map_err(|e| {
+                TransientError::SledError {
+                    error: e
+                }
+            })?;
+            let metadata = match metadata_opt {
+                Some(t) => t,
+                None => return Ok(None)
+            };
             let meta =
                 Metadata::from_u8(&metadata).map_err(|_| TransientError::ParsingFromByteError)?;
             let s = freq_tree.compare_and_swap(
@@ -326,7 +327,7 @@ impl DB {
         }
         Metrics::increment_operations("increment_frequency");
 
-        Ok(())
+        Ok(Some(()))
     }
 
     /// Removes a key-value pair and its associated metadata from the database.
@@ -678,6 +679,209 @@ impl DB {
         }
 
         Ok(db)
+    }
+
+    pub fn get_db_size(&self) -> usize {
+        self.data_tree.len()
+    }
+
+    /// Retrieves the raw value for a given raw key.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the value cannot be retrieved from the database or
+    /// if the value is not valid UTF-8.
+    pub fn get_raw(&self, key: &[u8]) -> Result<Option<Vec<u8>>, TransientError> {
+        let data_tree = &self.data_tree;
+        let byte = key;
+        let val = data_tree.get(byte).map_err(|e| {
+            TransientError::SledError {
+                error: e
+            }
+        });
+
+        Metrics::increment_operations("get");
+
+        val.map(|a| a.map(|b| b.to_vec()))
+    }
+
+    /// Sets a raw key-value pair with an optional Time-To-Live (TTL).
+    ///
+    /// If the key already exists, its value and TTL will be updated.
+    /// If `ttl` is `None`, the key will be persistent.
+    ///
+    /// # Errors
+    ///
+    /// This function can return an error if there's an issue with the
+    /// underlying
+    pub fn set_raw(
+        &self,
+        key: &[u8],
+        val: &[u8],
+        ttl: Option<Duration>
+    ) -> Result<(), TransientError> {
+        let data_tree = &self.data_tree;
+        let freq_tree = &self.meta_tree;
+        let ttl_tree = &self.ttl_tree;
+        let byte = key;
+        let ttl_sec = match ttl {
+            Some(t) => {
+                let systime = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .expect("Cant get SystemTime");
+                Some((t + systime).as_secs())
+            },
+            None => None
+        };
+
+        let l: Result<(), TransactionError<()>> = (&**data_tree, &**freq_tree, &**ttl_tree)
+            .transaction(|(data, freq, ttl_tree)| {
+                match freq.get(byte)? {
+                    Some(m) => {
+                        let mut meta = Metadata::from_u8(&m)
+                            .map_err(|_| ConflictableTransactionError::Abort(()))?;
+                        if let Some(t) = meta.ttl {
+                            let _ = ttl_tree.remove([&t.to_be_bytes()[..], byte].concat());
+                        }
+                        meta.ttl = ttl_sec;
+                        freq.insert(
+                            byte,
+                            meta.to_u8()
+                                .map_err(|_| ConflictableTransactionError::Abort(()))?
+                        )?;
+                    },
+                    None => {
+                        freq.insert(
+                            byte,
+                            Metadata::new(ttl_sec)
+                                .to_u8()
+                                .map_err(|_| ConflictableTransactionError::Abort(()))?
+                        )?;
+                    }
+                }
+
+                data.insert(byte, val)?;
+
+                if let Some(d) = ttl_sec {
+                    ttl_tree.insert([&d.to_be_bytes()[..], byte].concat(), byte)?;
+                    Metrics::inc_keys_total("ttl");
+                };
+
+                Ok(())
+            });
+        l.map_err(|_| TransientError::SledTransactionError)?;
+
+        // Prometheus metrics
+        Metrics::increment_operations("set");
+        Metrics::inc_keys_total("data");
+        Metrics::inc_keys_total("meta");
+
+        Ok(())
+    }
+
+    /// Retrieves the metadata for a given raw key.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the metadata cannot be retrieved or deserialized.
+    pub fn get_metadata_raw(&self, key: &[u8]) -> Result<Option<Metadata>, TransientError> {
+        let freq_tree = &self.meta_tree;
+        let byte = key;
+        let meta = freq_tree.get(byte).map_err(|e| {
+            TransientError::SledError {
+                error: e
+            }
+        })?;
+        match meta {
+            Some(val) => {
+                Ok(Some(
+                    Metadata::from_u8(&val).map_err(|_| TransientError::ParsingFromByteError)?
+                ))
+            },
+            None => Ok(None)
+        }
+    }
+
+    /// Removes a raw key-value pair and its associated metadata from the
+    /// database.
+    ///
+    /// # Errors
+    ///
+    /// Can return an error if the transaction to remove the data fails.
+    pub fn remove_raw(&self, key: &[u8]) -> Result<(), TransientError> {
+        let data_tree = &self.data_tree;
+        let freq_tree = &self.meta_tree;
+        let ttl_tree = &self.ttl_tree;
+        let byte = &key;
+        let l: Result<(), TransactionError<()>> = (&**data_tree, &**freq_tree, &**ttl_tree)
+            .transaction(|(data, freq, ttl_tree)| {
+                data.remove(*byte)?;
+                let meta = freq
+                    .get(byte)?
+                    .ok_or(ConflictableTransactionError::Abort(()))?;
+                let time = Metadata::from_u8(&meta)
+                    .map_err(|_| ConflictableTransactionError::Abort(()))?
+                    .ttl;
+                freq.remove(*byte)?;
+
+                Metrics::dec_keys_total("data");
+                Metrics::dec_keys_total("meta");
+
+                if let Some(t) = time {
+                    Metrics::dec_keys_total("ttl");
+
+                    let _ = ttl_tree.remove([&t.to_be_bytes()[..], &byte[..]].concat());
+                }
+
+                Ok(())
+            });
+        l.map_err(|_| TransientError::SledTransactionError)?;
+
+        Metrics::increment_operations("rm");
+
+        Ok(())
+    }
+
+    /// Atomically increments the frequency counter for a given raw key.
+    ///
+    /// # Errors
+    ///
+    /// This function can return an error if the key does not exist or if there
+    /// is an issue with the compare-and-swap operation.
+    pub fn increment_frequency_raw(&self, key: &[u8]) -> Result<Option<()>, TransientError> {
+        let freq_tree = &self.meta_tree;
+        let byte = &key;
+
+        loop {
+            let metadata_opt = freq_tree.get(byte).map_err(|e| {
+                TransientError::SledError {
+                    error: e
+                }
+            })?;
+            let metadata = match metadata_opt {
+                Some(t) => t,
+                None => return Ok(None)
+            };
+            let meta =
+                Metadata::from_u8(&metadata).map_err(|_| TransientError::ParsingFromByteError)?;
+            let s = freq_tree.compare_and_swap(
+                byte,
+                Some(metadata),
+                Some(
+                    meta.freq_incretement()
+                        .to_u8()
+                        .map_err(|_| TransientError::ParsingToByteError)?
+                )
+            );
+            if let Ok(ss) = s
+                && ss.is_ok()
+            {
+                break;
+            }
+        }
+        Metrics::increment_operations("increment_frequency");
+
+        Ok(Some(()))
     }
 }
 

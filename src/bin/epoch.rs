@@ -1,22 +1,38 @@
-use std::path::Path;
-use std::time::Duration;
+use std::error::Error;
 
-use epoch_db::DB;
+use epoch_db::db::errors::TransientError;
+use tokio::io::{AsyncBufReadExt, AsyncReadExt, BufReader};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let db = DB::new(Path::new("./databasetest")).unwrap();
 
-    db.set("H", "haha", None).unwrap();
-    db.set("HAHAHHAH", "Skib", None).unwrap();
-    db.set("HI", "h", None).unwrap();
-    db.set("Chronos", "Temporal", None).unwrap();
-    db.set("pop", "HAHAHAHH", Some(Duration::new(0, 100000)))
-        .unwrap();
-    for i in 0..1000 {
-        db.get("HI").unwrap();
-        db.set(&format!("{i}"), "h", None).unwrap();
-    }
-    db.backup_to(Path::new("./backup/")).unwrap();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
+    let mut stream = BufReader::new(&b"*2\r\n$3\r\nGET\r\n$3\r\nkey\r\n"[..]);
+    let mut element_size: Vec<u8> = Vec::new();
+    let _ = stream.read_exact(&mut [0]).await;
+    stream.read_until(b'\n', &mut element_size).await.map_err(|e| TransientError::IOError { error: e })?;
+    
+    let key: Option<String> = None;
+    let value: Option<String> = None;
+    let ttl: Option<u64> = None;
 
     Ok(())
 }

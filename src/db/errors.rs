@@ -25,7 +25,9 @@ pub enum TransientError {
     /// Error that occurs when parsing a byte slice to a u64 fails.
     ParsingToU64ByteFailed,
     /// Error that occurs when any folder in the path doesnt exist.
-    FolderNotFound { path: PathBuf },
+    FolderNotFound {
+        path: PathBuf
+    },
     /// Wrapper for `zip::result::ZipError`.
     ZipError {
         /// The underlying `zip::result::ZipError`.
@@ -45,6 +47,15 @@ pub enum TransientError {
     IOError {
         /// The underlying `std::io::Error`
         error: std::io::Error
+    },
+    InvalidCommand,
+    ValueNotFound,
+    ClientDisconnected,
+    AboveSizeLimit,
+    WrongNumberOfArguments {
+        command: String,
+        expected: u32,
+        received: u32
     }
 }
 
@@ -73,10 +84,26 @@ impl Display for TransientError {
             TransientError::MetadataNotFound => writeln!(f, "Metadata is not found"),
             TransientError::DBMetadataNotFound => writeln!(f, "DB metadata is not found"),
             TransientError::PoisonedMutex => writeln!(f, "Mutex is poisoned"),
-            TransientError::ParsingFromByteError => writeln!(f, "Partsing from byte failed"),
+            TransientError::ParsingFromByteError => writeln!(f, "Parsing from byte failed"),
             TransientError::IOError {
                 error
-            } => writeln!(f, "std IO failed {error}")
+            } => writeln!(f, "std IO failed {error}"),
+            TransientError::InvalidCommand => writeln!(f, "Command is invalid"),
+            TransientError::ValueNotFound => writeln!(f, "Value is not found"),
+            TransientError::ClientDisconnected => writeln!(f, "Client has disconnected"),
+            TransientError::AboveSizeLimit => {
+                writeln!(f, "Message received was above the size limit")
+            },
+            TransientError::WrongNumberOfArguments {
+                command,
+                expected,
+                received
+            } => {
+                writeln!(
+                    f,
+                    "Wrong number of arguments for \"{command}\" command; Needed {expected} arguments, Received {received} arguments"
+                )
+            }
         }
     }
 }
