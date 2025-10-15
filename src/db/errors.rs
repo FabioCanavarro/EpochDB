@@ -99,7 +99,10 @@ impl Display for TransientError {
                 expected,
                 received
             } => {
-                writeln!(f, "Wrong number of arguments for \"{command}\" command; Needed {expected} arguments, Received {received} arguments")
+                writeln!(
+                    f,
+                    "Wrong number of arguments for \"{command}\" command; Needed {expected} arguments, Received {received} arguments"
+                )
             }
         }
     }

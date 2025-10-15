@@ -5,9 +5,9 @@ use std::str::from_utf8;
 use std::sync::Arc;
 use std::time::Duration;
 
+use epoch_db::DB;
 use epoch_db::db::errors::TransientError;
 use epoch_db::metadata::RespValue;
-use epoch_db::DB;
 use tokio::io::{
     AsyncBufReadExt,
     AsyncReadExt,
@@ -31,8 +31,8 @@ use tracing::{
     warn
 };
 use tracing_subscriber::{
-    fmt,
-    EnvFilter
+    EnvFilter,
+    fmt
 };
 
 // Constants
@@ -104,14 +104,14 @@ async fn check_argument(
                 command: command.clone(),
                 expected: min,
                 received
-            })
+            });
         }
     } else if received > expected {
         return Err(TransientError::WrongNumberOfArguments {
             command: command.clone(),
             expected,
             received
-        })
+        });
     }
     Ok(())
 }
@@ -204,7 +204,11 @@ async fn response_handler(mut stream: TcpStream, store: Arc<DB>) -> Result<(), T
                                         }
                                     })?;
                             },
-                            TransientError::WrongNumberOfArguments { ref command, expected, received } => {
+                            TransientError::WrongNumberOfArguments {
+                                ref command,
+                                expected,
+                                received
+                            } => {
                                 error!("Error {:?}", e);
                                 bufwriter
                                     .write_all(format!("-ERR Wrong number of arguments for \"{command}\" command; Needed at least {expected} arguments, Received {received} arguments\r\n").as_bytes())
@@ -214,7 +218,7 @@ async fn response_handler(mut stream: TcpStream, store: Arc<DB>) -> Result<(), T
                                             error: e
                                         }
                                     })?;
-                            }
+                            },
                             _ => {
                                 error!("error: {:?}", e);
                                 return Err(e);
@@ -280,7 +284,7 @@ async fn parse_command(
                 _ => {
                     return Err(TransientError::IOError {
                         error: e
-                    })
+                    });
                 },
             }
         },
@@ -353,7 +357,7 @@ async fn parse_integer(stream: &mut BufReader<ReadHalf<'_>>) -> Result<u64, Tran
                 _ => {
                     return Err(TransientError::IOError {
                         error: e
-                    })
+                    });
                 },
             }
         },
@@ -388,7 +392,7 @@ async fn parse_bulk_string(
                 _ => {
                     return Err(TransientError::IOError {
                         error: e
-                    })
+                    });
                 },
             }
         },
@@ -421,7 +425,7 @@ async fn parse_bulk_string(
                 _ => {
                     return Err(TransientError::IOError {
                         error: e
-                    })
+                    });
                 },
             }
         },
@@ -438,7 +442,7 @@ async fn parse_bulk_string(
                 _ => {
                     return Err(TransientError::IOError {
                         error: e
-                    })
+                    });
                 },
             }
         },
