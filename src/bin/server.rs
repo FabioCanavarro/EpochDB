@@ -5,9 +5,9 @@ use std::str::from_utf8;
 use std::sync::Arc;
 use std::time::Duration;
 
-use epoch_db::DB;
 use epoch_db::db::errors::TransientError;
 use epoch_db::metadata::RespValue;
+use epoch_db::DB;
 use tokio::io::{
     AsyncBufReadExt,
     AsyncReadExt,
@@ -31,8 +31,8 @@ use tracing::{
     warn
 };
 use tracing_subscriber::{
-    EnvFilter,
-    fmt
+    fmt,
+    EnvFilter
 };
 
 // Constants

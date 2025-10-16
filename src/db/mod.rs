@@ -14,8 +14,8 @@ use std::io::{
 };
 use std::path::Path;
 use std::str::from_utf8;
-use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
 use std::thread::{
     self,
     JoinHandle
@@ -28,12 +28,12 @@ use std::time::{
 
 use chrono::Local;
 use errors::TransientError;
-use sled::Config;
 use sled::transaction::{
     ConflictableTransactionError,
     TransactionError,
     Transactional
 };
+use sled::Config;
 use zip::write::SimpleFileOptions;
 use zip::{
     ZipArchive,
@@ -42,8 +42,8 @@ use zip::{
 
 use crate::metrics::Metrics;
 use crate::{
-    DB,
-    Metadata
+    Metadata,
+    DB
 };
 
 impl DB {
@@ -719,8 +719,7 @@ impl DB {
         key: &K,
         val: &V,
         ttl: Option<Duration>
-    ) -> Result<(), TransientError> 
-    {
+    ) -> Result<(), TransientError> {
         let data_tree = &self.data_tree;
         let freq_tree = &self.meta_tree;
         let ttl_tree = &self.ttl_tree;
@@ -785,7 +784,10 @@ impl DB {
     /// # Errors
     ///
     /// Returns an error if the metadata cannot be retrieved or deserialized.
-    pub fn get_metadata_raw<K: AsRef<[u8]>> (&self, key: &K) -> Result<Option<Metadata>, TransientError> {
+    pub fn get_metadata_raw<K: AsRef<[u8]>>(
+        &self,
+        key: &K
+    ) -> Result<Option<Metadata>, TransientError> {
         let freq_tree = &self.meta_tree;
         let byte = key.as_ref();
         let meta = freq_tree.get(byte).map_err(|e| {
