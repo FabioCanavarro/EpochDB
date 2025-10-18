@@ -1,11 +1,40 @@
-pub mod utils;
 pub mod commands;
+pub mod utils;
 
-use std::{io::ErrorKind, str::from_utf8, sync::Arc, time::Duration};
-use tokio::{io::{AsyncReadExt, AsyncWriteExt, BufReader, BufWriter}, net::{tcp::{ReadHalf, WriteHalf}, TcpStream}};
-use tracing::{error, info, warn};
+use std::io::ErrorKind;
+use std::str::from_utf8;
+use std::sync::Arc;
+use std::time::Duration;
 
-use crate::{db::errors::TransientError, metadata::RespValue, server::{commands::{Command, ParsedResponse}, utils::{check_argument, parse_bulk_string, parse_integer}}, DB};
+use tokio::io::{
+    AsyncReadExt,
+    AsyncWriteExt,
+    BufReader,
+    BufWriter
+};
+use tokio::net::tcp::{
+    ReadHalf,
+    WriteHalf
+};
+use tokio::net::TcpStream;
+use tracing::{
+    error,
+    info,
+    warn
+};
+
+use crate::db::errors::TransientError;
+use crate::metadata::RespValue;
+use crate::server::commands::{
+    Command,
+    ParsedResponse
+};
+use crate::server::utils::{
+    check_argument,
+    parse_bulk_string,
+    parse_integer
+};
+use crate::DB;
 
 pub static CLIENT_COMMAND_SIZE: u64 = 4096;
 

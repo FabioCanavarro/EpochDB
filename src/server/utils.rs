@@ -1,9 +1,20 @@
-use std::{io::ErrorKind, str::from_utf8};
+use std::io::ErrorKind;
+use std::str::from_utf8;
 
-use tokio::{io::{AsyncBufReadExt, AsyncReadExt, BufReader}, net::tcp::ReadHalf};
+use tokio::io::{
+    AsyncBufReadExt,
+    AsyncReadExt,
+    BufReader
+};
+use tokio::net::tcp::ReadHalf;
 use tracing::error;
-use tracing_subscriber::{fmt, EnvFilter};
-use crate::{db::errors::TransientError, server::CLIENT_COMMAND_SIZE};
+use tracing_subscriber::{
+    fmt,
+    EnvFilter
+};
+
+use crate::db::errors::TransientError;
+use crate::server::CLIENT_COMMAND_SIZE;
 
 pub async fn check_argument(
     command: String,
@@ -76,7 +87,8 @@ pub async fn parse_integer(stream: &mut BufReader<ReadHalf<'_>>) -> Result<u64, 
         .map_err(|_| TransientError::InvalidCommand)
 }
 
-/// Parses a single Bulk String from the stream (e.g., "$5\r\nhello\r\n") to a Vec<u8>
+/// Parses a single Bulk String from the stream (e.g., "$5\r\nhello\r\n") to a
+/// Vec<u8>
 pub async fn parse_bulk_string(
     stream: &mut BufReader<ReadHalf<'_>>
 ) -> Result<Vec<u8>, TransientError> {
