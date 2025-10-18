@@ -68,7 +68,10 @@ pub async fn response_handler(mut stream: TcpStream, store: Arc<DB>) -> Result<(
                             } => {
                                 error!("Error {:?}", e);
                                 bufwriter
-                                    .write_all(format!("-ERR Wrong number of arguments for \"{command}\" command; Needed at least {expected} arguments, Received {received} arguments\r\n").as_bytes())
+                                    .write_all(
+                                        format!("-ERR Wrong number of arguments for \"{command}\" command; Needed at least {expected} arguments, Received {received} arguments\r\n")
+                                            .as_bytes()
+                                    )
                                     .await
                                     .map_err(|e| {
                                         TransientError::IOError {
