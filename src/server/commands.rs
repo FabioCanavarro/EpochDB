@@ -53,3 +53,80 @@ impl From<Command> for String {
         }
     }
 }
+
+impl From<Command> for &[u8] {
+    fn from(value: Command) -> Self {
+        match value {
+            Command::Set => b"set",
+            Command::Rm => b"rm",
+            Command::Get => b"get",
+            Command::Ping => b"ping",
+            Command::Size => b"size",
+            Command::Flush => b"flush",
+            Command::GetMetadata => b"get_metadata",
+            Command::IncrementFrequency => b"increment_frequency",
+            Command::Invalid => b"Invalid"
+        }
+    }
+}
+
+impl From<&[u8]> for Command {
+    fn from(value: &[u8]) -> Self {
+        if value == b"set" {
+            Command::Set
+        }
+        else if value == b"rm" {
+            Command::Rm
+        }
+        else if value == b"get" {
+            Command::Get
+        }
+        else if value == b"ping" {
+            Command::Ping
+        }
+        else if value == b"size" {
+            Command::Size
+        }
+        else if value == b"flush" {
+            Command::Flush
+        }
+        else if value == b"get_metadata" {
+            Command::GetMetadata
+        }
+        else if value == b"increment_frequency" {
+            Command::IncrementFrequency
+        }
+        else {
+            Command::Invalid
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
