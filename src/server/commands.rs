@@ -1,4 +1,5 @@
 use std::time::Duration;
+use std::borrow::ToOwned;
 
 #[allow(dead_code)]
 pub struct ParsedResponse {
@@ -72,31 +73,32 @@ impl From<Command> for &[u8] {
 
 impl From<&[u8]> for Command {
     fn from(value: &[u8]) -> Self {
-        if value == b"set" {
+        if value.eq_ignore_ascii_case(b"set") {
             Command::Set
         }
-        else if value == b"rm" {
+        else if value.eq_ignore_ascii_case(b"rm") {
             Command::Rm
         }
-        else if value == b"get" {
+        else if value.eq_ignore_ascii_case(b"get") {
             Command::Get
         }
-        else if value == b"ping" {
+        else if value.eq_ignore_ascii_case(b"ping") {
             Command::Ping
         }
-        else if value == b"size" {
+        else if value.eq_ignore_ascii_case(b"size") {
             Command::Size
         }
-        else if value == b"flush" {
+        else if value.eq_ignore_ascii_case(b"flush") {
             Command::Flush
         }
-        else if value == b"get_metadata" {
+        else if value.eq_ignore_ascii_case(b"get_metadata") {
             Command::GetMetadata
         }
-        else if value == b"increment_frequency" {
+        else if value.eq_ignore_ascii_case(b"increment_frequency") {
             Command::IncrementFrequency
         }
         else {
+            // If the command is not recognized
             Command::Invalid
         }
     }
