@@ -47,7 +47,7 @@ pub async fn response_handler(mut stream: TcpStream, store: Arc<DB>) -> Result<(
         let cmd_err = parse_command(&mut bufreader).await;
         match cmd_err {
             Ok(cmd) => {
-                match execute_commands(cmd, store.clone(), &mut bufwriter).await {
+                match execute_commands(cmd, &store, &mut bufwriter).await {
                     Ok(_) => (),
                     Err(e) => {
                         match e {
@@ -174,14 +174,10 @@ pub async fn parse_command(
     }
 
     // Map the raw command parts to ParsedResponse struct
-    let command_raw = from_utf8(
-        command_parts
+    let command_raw = command_parts
             .first()
-            .ok_or(TransientError::InvalidCommand)?
-    )
-    .map_err(|_| TransientError::ParsingToUTF8Error)?;
-    let command_str = command_raw.to_uppercase();
-    let command = Command::from(command_str);
+            .ok_or(TransientError::InvalidCommand)?;
+    let command = Command::from(&command_raw[..]);
     let key = command_parts.get(1).cloned();
     let value = command_parts.get(2).cloned();
 
@@ -207,7 +203,7 @@ pub async fn parse_command(
 
 pub async fn execute_commands(
     parsed_reponse: ParsedResponse,
-    store: Arc<DB>,
+    store: &Arc<DB>,
     stream: &mut BufWriter<WriteHalf<'_>>
 ) -> Result<(), TransientError> {
     let cmd = parsed_reponse.command;

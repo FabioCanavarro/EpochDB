@@ -1,5 +1,4 @@
 use std::time::Duration;
-use std::borrow::ToOwned;
 
 #[allow(dead_code)]
 pub struct ParsedResponse {
