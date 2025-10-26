@@ -215,8 +215,8 @@ pub async fn execute_commands(
         Command::Set => {
             check_argument(cmd.into(), 4, parsed_reponse.len, Some(3)).await?;
             match store.set_raw(
-                &key.ok_or(TransientError::InvalidCommand)?,
-                &val.ok_or(TransientError::InvalidCommand)?,
+                &&key.ok_or(TransientError::InvalidCommand)?[..],
+                &&val.ok_or(TransientError::InvalidCommand)?[..],
                 ttl
             ) {
                 Ok(_) => {
@@ -240,7 +240,7 @@ pub async fn execute_commands(
         },
         Command::GetMetadata => {
             check_argument(cmd.into(), 2, parsed_reponse.len, None).await?;
-            match store.get_metadata_raw(&key.ok_or(TransientError::InvalidCommand)?) {
+            match store.get_metadata_raw(&&key.ok_or(TransientError::InvalidCommand)?[..]) {
                 Ok(v) => {
                     match v {
                         Some(val) => {
@@ -333,7 +333,7 @@ pub async fn execute_commands(
         },
         Command::Rm => {
             check_argument(cmd.into(), 2, parsed_reponse.len, None).await?;
-            match store.remove_raw(&key.ok_or(TransientError::InvalidCommand)?) {
+            match store.remove_raw(&key.ok_or(TransientError::InvalidCommand)?[..]) {
                 Ok(_) => {
                     stream.write_all(b"+OK\r\n").await.map_err(|e| {
                         TransientError::IOError {
@@ -379,7 +379,7 @@ pub async fn execute_commands(
         },
         Command::Get => {
             check_argument(cmd.into(), 2, parsed_reponse.len, None).await?;
-            match store.get_raw(&key.ok_or(TransientError::InvalidCommand)?) {
+            match store.get_raw(&&key.ok_or(TransientError::InvalidCommand)?[..]) {
                 Ok(v) => {
                     match v {
                         Some(val) => {
@@ -426,7 +426,7 @@ pub async fn execute_commands(
         },
         Command::IncrementFrequency => {
             check_argument(cmd.into(), 2, parsed_reponse.len, None).await?;
-            match store.increment_frequency_raw(&key.ok_or(TransientError::InvalidCommand)?) {
+            match store.increment_frequency_raw(&key.ok_or(TransientError::InvalidCommand)?[..]) {
                 Ok(t) => {
                     match t {
                         Some(_) => {
