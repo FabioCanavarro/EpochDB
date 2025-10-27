@@ -2,7 +2,10 @@ use std::io::ErrorKind;
 use std::str::from_utf8;
 
 use tokio::io::{
-    AsyncBufReadExt, AsyncRead, AsyncReadExt, BufReader
+    AsyncBufReadExt,
+    AsyncRead,
+    AsyncReadExt,
+    BufReader
 };
 use tracing::error;
 use tracing_subscriber::{
@@ -51,7 +54,9 @@ pub fn init_logger() {
 }
 
 /// A helper function to read a line terminated by '\n' and parse it as a u64
-pub async fn parse_integer<T: AsyncReadExt + AsyncRead + Unpin>(stream: &mut BufReader<T>) -> Result<u64, TransientError> {
+pub async fn parse_integer<T: AsyncReadExt + AsyncRead + Unpin>(
+    stream: &mut BufReader<T>
+) -> Result<u64, TransientError> {
     let mut buffer = Vec::new();
     match stream.read_until(b'\n', &mut buffer).await {
         Ok(_) => (),

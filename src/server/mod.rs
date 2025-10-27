@@ -7,7 +7,11 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use tokio::io::{
-    AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader, BufWriter
+    AsyncRead,
+    AsyncReadExt,
+    AsyncWriteExt,
+    BufReader,
+    BufWriter
 };
 use tokio::net::tcp::WriteHalf;
 use tokio::net::TcpStream;
@@ -169,8 +173,8 @@ pub async fn parse_command<T: AsyncReadExt + AsyncRead + Unpin>(
 
     // Map the raw command parts to ParsedResponse struct
     let command_raw = command_parts
-            .first()
-            .ok_or(TransientError::InvalidCommand)?;
+        .first()
+        .ok_or(TransientError::InvalidCommand)?;
     let command = Command::from(&command_raw[..]);
     let key = command_parts.get(1).cloned();
     let value = command_parts.get(2).cloned();
