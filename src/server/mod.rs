@@ -7,15 +7,9 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use tokio::io::{
-    AsyncReadExt,
-    AsyncWriteExt,
-    BufReader,
-    BufWriter
+    AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader, BufWriter
 };
-use tokio::net::tcp::{
-    ReadHalf,
-    WriteHalf
-};
+use tokio::net::tcp::WriteHalf;
 use tokio::net::TcpStream;
 use tracing::{
     error,
@@ -133,8 +127,8 @@ pub async fn response_handler(mut stream: TcpStream, store: Arc<DB>) -> Result<(
 
 /// Parses a single RESP command from the stream
 /// This is the main entry point for the parser
-pub async fn parse_command(
-    stream: &mut BufReader<ReadHalf<'_>>
+pub async fn parse_command<T: AsyncReadExt + AsyncRead + Unpin>(
+    stream: &mut BufReader<T>
 ) -> Result<ParsedResponse, TransientError> {
     let first_byte = match stream.read_u8().await {
         Ok(t) => t,

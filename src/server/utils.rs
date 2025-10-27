@@ -2,11 +2,8 @@ use std::io::ErrorKind;
 use std::str::from_utf8;
 
 use tokio::io::{
-    AsyncBufReadExt,
-    AsyncReadExt,
-    BufReader
+    AsyncBufReadExt, AsyncRead, AsyncReadExt, BufReader
 };
-use tokio::net::tcp::ReadHalf;
 use tracing::error;
 use tracing_subscriber::{
     fmt,
@@ -54,7 +51,7 @@ pub fn init_logger() {
 }
 
 /// A helper function to read a line terminated by '\n' and parse it as a u64
-pub async fn parse_integer(stream: &mut BufReader<ReadHalf<'_>>) -> Result<u64, TransientError> {
+pub async fn parse_integer<T: AsyncReadExt + AsyncRead + Unpin>(stream: &mut BufReader<T>) -> Result<u64, TransientError> {
     let mut buffer = Vec::new();
     match stream.read_until(b'\n', &mut buffer).await {
         Ok(_) => (),
@@ -89,8 +86,8 @@ pub async fn parse_integer(stream: &mut BufReader<ReadHalf<'_>>) -> Result<u64, 
 
 /// Parses a single Bulk String from the stream (e.g., "$5\r\nhello\r\n") to a
 /// Vec<u8>
-pub async fn parse_bulk_string(
-    stream: &mut BufReader<ReadHalf<'_>>
+pub async fn parse_bulk_string<T: AsyncRead + AsyncReadExt + Unpin>(
+    stream: &mut BufReader<T>
 ) -> Result<Vec<u8>, TransientError> {
     let first_byte = match stream.read_u8().await {
         Ok(t) => t,
