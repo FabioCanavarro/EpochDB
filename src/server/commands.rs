@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 #[allow(dead_code)]
+#[derive(Debug, PartialEq)]
 pub struct ParsedResponse {
     pub command: Command,
     pub key: Option<Vec<u8>>,
@@ -10,6 +11,7 @@ pub struct ParsedResponse {
 }
 
 #[allow(dead_code)]
+#[derive(Debug, PartialEq)]
 pub enum Command {
     Set,
     Get,
