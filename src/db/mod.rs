@@ -691,9 +691,9 @@ impl DB {
     ///
     /// Returns an error if the value cannot be retrieved from the database or
     /// if the value is not valid UTF-8.
-    pub fn get_raw(&self, key: &[u8]) -> Result<Option<Vec<u8>>, TransientError> {
+    pub fn get_raw<K: AsRef<[u8]>>(&self, key: &K) -> Result<Option<Vec<u8>>, TransientError> {
         let data_tree = &self.data_tree;
-        let byte = key;
+        let byte = key.as_ref();
         let val = data_tree.get(byte).map_err(|e| {
             TransientError::SledError {
                 error: e
@@ -714,16 +714,16 @@ impl DB {
     ///
     /// This function can return an error if there's an issue with the
     /// underlying
-    pub fn set_raw(
+    pub fn set_raw<K: AsRef<[u8]>, V: AsRef<[u8]>>(
         &self,
-        key: &[u8],
-        val: &[u8],
+        key: &K,
+        val: &V,
         ttl: Option<Duration>
     ) -> Result<(), TransientError> {
         let data_tree = &self.data_tree;
         let freq_tree = &self.meta_tree;
         let ttl_tree = &self.ttl_tree;
-        let byte = key;
+        let byte: &[u8] = key.as_ref();
         let ttl_sec = match ttl {
             Some(t) => {
                 let systime = SystemTime::now()
@@ -760,7 +760,7 @@ impl DB {
                     }
                 }
 
-                data.insert(byte, val)?;
+                data.insert(byte, val.as_ref())?;
 
                 if let Some(d) = ttl_sec {
                     ttl_tree.insert([&d.to_be_bytes()[..], byte].concat(), byte)?;
@@ -784,9 +784,12 @@ impl DB {
     /// # Errors
     ///
     /// Returns an error if the metadata cannot be retrieved or deserialized.
-    pub fn get_metadata_raw(&self, key: &[u8]) -> Result<Option<Metadata>, TransientError> {
+    pub fn get_metadata_raw<K: AsRef<[u8]>>(
+        &self,
+        key: &K
+    ) -> Result<Option<Metadata>, TransientError> {
         let freq_tree = &self.meta_tree;
-        let byte = key;
+        let byte = key.as_ref();
         let meta = freq_tree.get(byte).map_err(|e| {
             TransientError::SledError {
                 error: e
@@ -808,21 +811,21 @@ impl DB {
     /// # Errors
     ///
     /// Can return an error if the transaction to remove the data fails.
-    pub fn remove_raw(&self, key: &[u8]) -> Result<(), TransientError> {
+    pub fn remove_raw<K: AsRef<[u8]>>(&self, key: K) -> Result<(), TransientError> {
         let data_tree = &self.data_tree;
         let freq_tree = &self.meta_tree;
         let ttl_tree = &self.ttl_tree;
-        let byte = &key;
+        let byte = key.as_ref();
         let l: Result<(), TransactionError<()>> = (&**data_tree, &**freq_tree, &**ttl_tree)
             .transaction(|(data, freq, ttl_tree)| {
-                data.remove(*byte)?;
+                data.remove(byte)?;
                 let meta = freq
                     .get(byte)?
                     .ok_or(ConflictableTransactionError::Abort(()))?;
                 let time = Metadata::from_u8(&meta)
                     .map_err(|_| ConflictableTransactionError::Abort(()))?
                     .ttl;
-                freq.remove(*byte)?;
+                freq.remove(byte)?;
 
                 Metrics::dec_keys_total("data");
                 Metrics::dec_keys_total("meta");
@@ -830,7 +833,7 @@ impl DB {
                 if let Some(t) = time {
                     Metrics::dec_keys_total("ttl");
 
-                    let _ = ttl_tree.remove([&t.to_be_bytes()[..], &byte[..]].concat());
+                    let _ = ttl_tree.remove([&t.to_be_bytes()[..], byte].concat());
                 }
 
                 Ok(())
