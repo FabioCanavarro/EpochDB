@@ -4,9 +4,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-use epoch_db::DB;
 use epoch_db::server::response_handler;
 use epoch_db::server::utils::init_logger;
+use epoch_db::DB;
 use tokio::net::TcpListener;
 use tokio::spawn;
 use tokio::time::sleep;

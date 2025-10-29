@@ -1,6 +1,10 @@
 use std::io::Cursor;
 use std::time::Duration;
-use epoch_db::server::commands::{Command, ParsedResponse};
+
+use epoch_db::server::commands::{
+    Command,
+    ParsedResponse
+};
 use epoch_db::server::parse_command;
 use futures::future;
 use tokio::io::BufReader;
@@ -24,7 +28,7 @@ async fn valid_command_test() {
         parse_command(&mut buf_reader).await.unwrap()
     });
     let r = future::join_all(res).await;
-    
+
     assert_eq!(
         r[0],
         ParsedResponse {
@@ -42,7 +46,7 @@ async fn valid_command_test() {
             command: Command::Set,
             key: Some(Vec::from(b"key")),
             value: Some(b"value".to_vec()),
-            ttl: Some(Duration::new(1 ,0)),
+            ttl: Some(Duration::new(1, 0)),
             len: 4
         }
     );
@@ -57,5 +61,4 @@ async fn valid_command_test() {
             len: 3
         }
     )
-
 }
