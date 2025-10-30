@@ -79,7 +79,7 @@ async fn test_parse_set_binary_value() {
             key: Some(vec![0xDE, 0xAD, 0xBE, 0xEF]),
             value: Some(vec![0xCA, 0xFE]),
             ttl: None,
-            len: 3,
+            len: 3
         }
     )
 }
@@ -96,7 +96,7 @@ async fn test_parse_remove_simple() {
             key: Some(b"key".to_vec()),
             value: None,
             ttl: None,
-            len: 2,
+            len: 2
         }
     )
 }
@@ -113,7 +113,7 @@ async fn test_parse_increment_frequency_simple() {
             key: Some(b"counter1".to_vec()),
             value: None,
             ttl: None,
-            len: 2,
+            len: 2
         }
     )
 }
@@ -130,7 +130,7 @@ async fn test_parse_get_metadata_simple() {
             key: Some(b"key".to_vec()),
             value: None,
             ttl: None,
-            len: 2,
+            len: 2
         }
     )
 }
@@ -147,7 +147,7 @@ async fn test_parse_size() {
             key: None,
             value: None,
             ttl: None,
-            len: 1,
+            len: 1
         }
     )
 }
@@ -164,7 +164,7 @@ async fn test_parse_ping() {
             key: None,
             value: None,
             ttl: None,
-            len: 1,
+            len: 1
         }
     )
 }
@@ -181,7 +181,7 @@ async fn test_parse_flush() {
             key: None,
             value: None,
             ttl: None,
-            len: 1,
+            len: 1
         }
     )
 }
@@ -198,7 +198,7 @@ async fn test_parse_command_case_sensitivity() {
             key: Some(b"key".to_vec()),
             value: None,
             ttl: None,
-            len: 2,
+            len: 2
         }
     )
 }
@@ -217,14 +217,13 @@ async fn test_parse_error_element_size_above_size_limit() {
                 TransientError::AboveSizeLimit => (),
                 _ => panic!("{e}")
             }
-        }
+        },
     }
 }
 
 #[tokio::test]
 async fn test_parse_error_bulk_string_size_above_size_limit() {
     let input = b"*2\r\n$3\r\nGET\r\n$10000000\r\nkey\r\n";
-;
     let c = Cursor::new(input);
     let mut buf_reader = BufReader::new(c);
     let r = parse_command(&mut buf_reader).await;
@@ -236,11 +235,6 @@ async fn test_parse_error_bulk_string_size_above_size_limit() {
                 TransientError::AboveSizeLimit => (),
                 _ => panic!("{e}")
             }
-        }
+        },
     }
 }
-
-
-
-
-
