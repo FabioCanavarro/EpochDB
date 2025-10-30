@@ -1,6 +1,7 @@
 use std::io::Cursor;
 use std::time::Duration;
 
+use epoch_db::db::errors::TransientError;
 use epoch_db::server::commands::{
     Command,
     ParsedResponse
@@ -65,13 +66,6 @@ async fn test_parse_set_empty_value() {
         }
     )
 }
-
-/* pastable
-#[tokio::test]
-async fn name() {
-    todo!();
-}
-*/
 
 #[tokio::test]
 async fn test_parse_set_binary_value() {
@@ -209,7 +203,23 @@ async fn test_parse_command_case_sensitivity() {
     )
 }
 
+#[tokio::test]
+async fn test_parse_error_above_size_limit() {
+    let input = b"*10000\r\n$5\r\nFLUSH\r\n";
+    let c = Cursor::new(input);
+    let mut buf_reader = BufReader::new(c);
+    let r = parse_command(&mut buf_reader).await;
 
+    match r {
+        Ok(_) => panic!("Parser accepted input with 10000 elements, which is above size limit"),
+        Err(e) => {
+            match e {
+                TransientError::AboveSizeLimit => (),
+                _ => panic!("{e}")
+            }
+        }
+    }
+}
 
 
 
