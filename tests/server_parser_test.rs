@@ -204,8 +204,27 @@ async fn test_parse_command_case_sensitivity() {
 }
 
 #[tokio::test]
-async fn test_parse_error_above_size_limit() {
+async fn test_parse_error_element_size_above_size_limit() {
     let input = b"*10000\r\n$5\r\nFLUSH\r\n";
+    let c = Cursor::new(input);
+    let mut buf_reader = BufReader::new(c);
+    let r = parse_command(&mut buf_reader).await;
+
+    match r {
+        Ok(_) => panic!("Parser accepted input with 10000 elements, which is above size limit"),
+        Err(e) => {
+            match e {
+                TransientError::AboveSizeLimit => (),
+                _ => panic!("{e}")
+            }
+        }
+    }
+}
+
+#[tokio::test]
+async fn test_parse_error_bulk_string_size_above_size_limit() {
+    let input = b"*2\r\n$3\r\nGET\r\n$10000000\r\nkey\r\n";
+;
     let c = Cursor::new(input);
     let mut buf_reader = BufReader::new(c);
     let r = parse_command(&mut buf_reader).await;
