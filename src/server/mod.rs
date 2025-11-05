@@ -7,11 +7,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use tokio::io::{
-    AsyncRead,
-    AsyncReadExt,
-    AsyncWriteExt,
-    BufReader,
-    BufWriter
+    AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader, BufWriter
 };
 use tokio::net::tcp::WriteHalf;
 use tokio::net::TcpStream;
@@ -199,10 +195,10 @@ pub async fn parse_command<T: AsyncReadExt + AsyncRead + Unpin>(
     })
 }
 
-pub async fn execute_commands(
+pub async fn execute_commands<T: AsyncWrite + AsyncWriteExt + Unpin>(
     parsed_reponse: ParsedResponse,
     store: &Arc<DB>,
-    stream: &mut BufWriter<WriteHalf<'_>>
+    stream: &mut BufWriter<T>
 ) -> Result<(), TransientError> {
     let cmd = parsed_reponse.command;
     let key = parsed_reponse.key;
