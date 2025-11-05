@@ -9,7 +9,6 @@ use std::time::Duration;
 use tokio::io::{
     AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader, BufWriter
 };
-use tokio::net::tcp::WriteHalf;
 use tokio::net::TcpStream;
 use tracing::{
     error,
