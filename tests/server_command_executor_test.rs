@@ -36,7 +36,7 @@ async fn execute_test_command(input: ParsedResponse, store: Arc<DB>) -> Vec<u8> 
 async fn test_execute_~_simple() {
     //Input
     let input = b"";
-    
+
     // DB SETUP
     let store = Arc::new(DB::new(tempfile::tempdir().unwrap().path()).unwrap());
 
@@ -67,7 +67,7 @@ async fn test_execute_get_simple() {
 async fn test_execute_set_simple() {
     //Input
     let input = b"*4\r\n$3\r\nSET\r\n$3\r\nkey\r\n$5\r\nvalue\r\n$4\r\n1000\r\n";
-    
+
     // DB SETUP
     let store = Arc::new(DB::new(tempfile::tempdir().unwrap().path()).unwrap());
 
