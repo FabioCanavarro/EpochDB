@@ -30,6 +30,26 @@ async fn execute_test_command(input: ParsedResponse, store: Arc<DB>) -> Vec<u8> 
 
     c.get_ref().to_vec()
 }
+/* NOTE: Easily copyable format type shi
+
+#[tokio::test]
+async fn test_execute_~_simple() {
+    //Input
+    let input = b"";
+    
+    // DB SETUP
+    let store = Arc::new(DB::new(tempfile::tempdir().unwrap().path()).unwrap());
+
+    // DB Shenanigans
+
+    // Cmd parse and execute
+    let cmd = parse_test_command(input).await;
+    let r = execute_test_command(cmd, store).await;
+
+    // Assert
+    assert_eq!(r, b"");
+}
+*/
 
 #[tokio::test]
 async fn test_execute_get_simple() {
@@ -41,4 +61,21 @@ async fn test_execute_get_simple() {
     let r = execute_test_command(cmd, store).await;
 
     assert_eq!(r, b"$1\r\n0\r\n");
+}
+
+#[tokio::test]
+async fn test_execute_set_simple() {
+    //Input
+    let input = b"*4\r\n$3\r\nSET\r\n$3\r\nkey\r\n$5\r\nvalue\r\n$4\r\n1000\r\n";
+    
+    // DB SETUP
+    let store = Arc::new(DB::new(tempfile::tempdir().unwrap().path()).unwrap());
+
+    // Cmd parse and execute
+    let cmd = parse_test_command(input).await;
+    let r = execute_test_command(cmd, store.clone()).await;
+
+    // Assert
+    assert_eq!(store.get("key").unwrap().unwrap(), "value");
+    assert_eq!(r, b"+OK\r\n");
 }
