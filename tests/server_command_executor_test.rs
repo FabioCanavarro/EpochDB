@@ -57,6 +57,44 @@ async fn test_execute_~_simple() {
 */
 
 #[tokio::test]
+async fn test_execute_increment_frequency_simple() {
+    //Input
+    let input = b"*2\r\n$19\r\nINCREMENT_FREQUENCY\r\n$3\r\nkey\r\n";
+
+    // DB SETUP
+    let store = Arc::new(DB::new(tempfile::tempdir().unwrap().path()).unwrap());
+
+    // DB Shenanigans
+    store.set_raw(b"key", b"value", None).unwrap();
+
+    // Cmd parse and execute
+    let cmd = parse_test_command(input).await;
+    let r = execute_test_command(cmd, store.clone()).await;
+
+    // Assert
+    assert_eq!(r, b"+OK\r\n");
+    assert_eq!(store.get_metadata_raw(b"key").unwrap().unwrap().freq, 1);
+}
+
+#[tokio::test]
+async fn test_execute_increment_frequency_key_not_found() {
+    //Input
+    let input = b"*2\r\n$19\r\nINCREMENT_FREQUENCY\r\n$3\r\nkey\r\n";
+
+    // DB SETUP
+    let store = Arc::new(DB::new(tempfile::tempdir().unwrap().path()).unwrap());
+
+    // DB Shenanigans
+
+    // Cmd parse and execute
+    let cmd = parse_test_command(input).await;
+    let r = execute_test_command(cmd, store.clone()).await;
+
+    // Assert
+    assert_eq!(r, b"$-1\r\n");
+}
+
+#[tokio::test]
 async fn test_execute_rm_simple() {
     //Input
     let input = b"*2\r\n$2\r\nRM\r\n$3\r\nkey\r\n";
