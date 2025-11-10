@@ -57,6 +57,43 @@ async fn test_execute_~_simple() {
 */
 
 #[tokio::test]
+async fn test_execute_size_no_data() {
+    //Input
+    let input = b"*1\r\n$4\r\nSIZE\r\n";
+
+    // DB SETUP
+    let store = Arc::new(DB::new(tempfile::tempdir().unwrap().path()).unwrap());
+
+    // DB Shenanigans
+
+    // Cmd parse and execute
+    let cmd = parse_test_command(input).await;
+    let r = execute_test_command(cmd, store).await;
+
+    // Assert
+    assert_eq!(r, b":0\r\n");
+}
+
+#[tokio::test]
+async fn test_execute_size_simple() {
+    //Input
+    let input = b"*1\r\n$4\r\nSIZE\r\n";
+
+    // DB SETUP
+    let store = Arc::new(DB::new(tempfile::tempdir().unwrap().path()).unwrap());
+
+    // DB Shenanigans
+    store.set_raw(b"a", b"1", None).unwrap();
+    store.set_raw(b"b", b"2", None).unwrap();
+    // Cmd parse and execute
+    let cmd = parse_test_command(input).await;
+    let r = execute_test_command(cmd, store).await;
+
+    // Assert
+    assert_eq!(r, b":2\r\n");
+}
+
+#[tokio::test]
 async fn test_execute_increment_frequency_simple() {
     //Input
     let input = b"*2\r\n$19\r\nINCREMENT_FREQUENCY\r\n$3\r\nkey\r\n";
