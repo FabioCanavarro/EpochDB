@@ -1,4 +1,5 @@
 use std::io::Cursor;
+use std::str::from_utf8;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -89,10 +90,8 @@ async fn test_execute_rm_key_not_found() {
     let r = execute_test_command(cmd, store).await;
 
     // Assert
-    assert_eq!(r, b"-ERR Sled Transaction failed\r\n");
+    assert_eq!(r, b"-ERR Sled Transaction failed\n\r\n");
 }
-
-
 
 #[tokio::test]
 async fn test_execute_ping() {

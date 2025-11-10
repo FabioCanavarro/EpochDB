@@ -350,8 +350,6 @@ pub async fn execute_commands<T: AsyncWrite + AsyncWriteExt + Unpin>(
                         })?
                 },
             };
-
-            todo!()
         },
         Command::Flush => {
             check_argument(cmd.into(), 1, parsed_reponse.len, None).await?;
