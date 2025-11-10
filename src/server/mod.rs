@@ -21,6 +21,7 @@ use tracing::{
     warn
 };
 
+use crate::DB;
 use crate::db::errors::TransientError;
 use crate::metadata::RespValue;
 use crate::server::commands::{
@@ -32,7 +33,6 @@ use crate::server::utils::{
     parse_bulk_string,
     parse_integer
 };
-use crate::DB;
 
 pub static CLIENT_COMMAND_SIZE: u64 = 4096;
 
