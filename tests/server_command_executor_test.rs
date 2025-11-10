@@ -2,12 +2,12 @@ use std::io::Cursor;
 use std::sync::Arc;
 use std::time::Duration;
 
-use epoch_db::DB;
 use epoch_db::server::commands::ParsedResponse;
 use epoch_db::server::{
     execute_commands,
     parse_command
 };
+use epoch_db::DB;
 use tokio::io::{
     AsyncWriteExt,
     BufReader,
@@ -71,7 +71,14 @@ async fn test_execute_get_metadata_simple() {
     let r = execute_test_command(cmd, store.clone()).await;
 
     // Assert
-    assert_eq!(r, format!("*6\r\n$9\r\nfrequency\r\n:0\r\n$10\r\ncreated_at\r\n:{}\r\n$3\r\nttl\r\n$-1\r\n", store.get_metadata("key").unwrap().unwrap().created_at).as_bytes());
+    assert_eq!(
+        r,
+        format!(
+            "*6\r\n$9\r\nfrequency\r\n:0\r\n$10\r\ncreated_at\r\n:{}\r\n$3\r\nttl\r\n$-1\r\n",
+            store.get_metadata("key").unwrap().unwrap().created_at
+        )
+        .as_bytes()
+    );
 }
 
 #[tokio::test]
