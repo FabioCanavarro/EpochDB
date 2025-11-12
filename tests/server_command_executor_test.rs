@@ -2,12 +2,12 @@ use std::io::Cursor;
 use std::sync::Arc;
 use std::time::Duration;
 
+use epoch_db::DB;
 use epoch_db::server::commands::ParsedResponse;
 use epoch_db::server::{
     execute_commands,
     parse_command
 };
-use epoch_db::DB;
 use tokio::io::{
     AsyncWriteExt,
     BufReader,
