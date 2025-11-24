@@ -56,7 +56,7 @@ async fn test_execute_~_simple() {
 */
 
 #[tokio::test]
-async fn test_execute_get_metadata_simple() {
+async fn test_execute_get_metadata_no_ttl() {
     //Input
     let input = b"*2\r\n$12\r\nGET_METADATA\r\n$3\r\nkey\r\n";
 
@@ -78,6 +78,54 @@ async fn test_execute_get_metadata_simple() {
             store.get_metadata("key").unwrap().unwrap().created_at
         )
         .as_bytes()
+    );
+}
+
+#[tokio::test]
+async fn test_execute_get_metadata_simple() {
+    //Input
+    let input = b"*2\r\n$12\r\nGET_METADATA\r\n$3\r\nkey\r\n";
+
+    // DB SETUP
+    let store = Arc::new(DB::new(tempfile::tempdir().unwrap().path()).unwrap());
+
+    // DB Shenanigans
+    store.set_raw(b"key", b"val", Some(Duration::from_secs(60))).unwrap();
+
+    // Cmd parse and execute
+    let cmd = parse_test_command(input).await;
+    let r = execute_test_command(cmd, store.clone()).await;
+
+    // Assert
+    assert_eq!(
+        r,
+        format!(
+            "*6\r\n$9\r\nfrequency\r\n:0\r\n$10\r\ncreated_at\r\n:{}\r\n$3\r\nttl\r\n:{}\r\n",
+            store.get_metadata("key").unwrap().unwrap().created_at,
+            store.get_metadata("key").unwrap().unwrap().ttl.unwrap()
+        )
+        .as_bytes()
+    );
+}
+
+#[tokio::test]
+async fn test_execute_get_metadata_key_not_found() {
+    //Input
+    let input = b"*2\r\n$12\r\nGET_METADATA\r\n$3\r\nkey\r\n";
+
+    // DB SETUP
+    let store = Arc::new(DB::new(tempfile::tempdir().unwrap().path()).unwrap());
+
+    // DB Shenanigans
+
+    // Cmd parse and execute
+    let cmd = parse_test_command(input).await;
+    let r = execute_test_command(cmd, store.clone()).await;
+
+    // Assert
+    assert_eq!(
+        r,
+        b"$-1\r\n"
     );
 }
 
