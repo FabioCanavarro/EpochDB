@@ -6,9 +6,9 @@ use std::thread::{
 };
 use std::time::Duration;
 
-use axum::Router;
 use axum::extract::State;
 use axum::routing::get;
+use axum::Router;
 use epoch_db::DB;
 use metrics_exporter_prometheus::{
     PrometheusBuilder,

@@ -2,12 +2,12 @@ use std::io::Cursor;
 use std::sync::Arc;
 use std::time::Duration;
 
-use epoch_db::DB;
 use epoch_db::server::commands::ParsedResponse;
 use epoch_db::server::{
     execute_commands,
     parse_command
 };
+use epoch_db::DB;
 use tokio::io::{
     AsyncWriteExt,
     BufReader,
@@ -68,7 +68,9 @@ async fn test_execute_get_metadata_simple() {
     let store = Arc::new(DB::new(tempfile::tempdir().unwrap().path()).unwrap());
 
     // DB Shenanigans
-    store.set_raw(b"key", b"val", Some(Duration::from_secs(60))).unwrap();
+    store
+        .set_raw(b"key", b"val", Some(Duration::from_secs(60)))
+        .unwrap();
 
     // Cmd parse and execute
     let cmd = parse_test_command(input).await;
@@ -101,10 +103,7 @@ async fn test_execute_get_metadata_key_not_found() {
     let r = execute_test_command(cmd, store.clone()).await;
 
     // Assert
-    assert_eq!(
-        r,
-        b"$-1\r\n"
-    );
+    assert_eq!(r, b"$-1\r\n");
 }
 
 #[tokio::test]
