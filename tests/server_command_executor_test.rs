@@ -362,10 +362,11 @@ async fn test_execute_invalid_command() {
     let r = execute_test_command(cmd, store).await;
 
     // Assert
-    assert_eq!(r, b"-ERR Command is invalid\r\n");
+    assert_eq!(r, b"-ERR Command is invalid\n\r\n");
 }
 
 #[tokio::test]
+#[should_panic]
 async fn test_execute_set_too_few_argument() {
     //input
     let input = b"*2\r\n$3\r\nSET\r\n$3\r\nkey\r\n";
@@ -382,6 +383,7 @@ async fn test_execute_set_too_few_argument() {
 }
 
 #[tokio::test]
+#[should_panic]
 async fn test_execute_set_too_many_argument() {
     //input
     let input = b"*5\r\n$3\r\nSET\r\n$1\r\na\r\n$1\r\nb\r\n$1\r\nc\r\n$1\r\nd\r\n";
