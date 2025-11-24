@@ -55,6 +55,7 @@ async fn test_execute_~_simple() {
 
 */
 
+// -----------------------------------NORMAL TESTS
 #[tokio::test]
 async fn test_execute_get_metadata_no_ttl() {
     //Input
@@ -371,3 +372,75 @@ async fn test_execute_set_ttl() {
 
     assert_eq!(store.get("key").unwrap(), None);
 }
+
+
+/* NOTE: Easily copyable format type shi
+
+#[tokio::test]
+async fn test_execute_~_~() {
+    //input
+    let input = b"";
+
+    // db setup
+    let store = arc::new(db::new(tempfile::tempdir().unwrap().path()).unwrap());
+
+    // cmd parse and execute
+    let cmd = parse_test_command(input).await;
+    let r = execute_test_command(cmd, store).await;
+
+    // assert
+    assert_eq!(r, b"");
+}
+
+*/
+
+#[tokio::test]
+async fn test_execute_invalid_command() {
+    //Input
+    let input = b"*2\r\n$6\r\nFOOBAR\r\n$3\r\nkey\r\n";
+
+    // DB SETUP
+    let store = Arc::new(DB::new(tempfile::tempdir().unwrap().path()).unwrap());
+
+    // Cmd parse and execute
+    let cmd = parse_test_command(input).await;
+    let r = execute_test_command(cmd, store).await;
+
+    // Assert
+    assert_eq!(r, b"-ERR Command is invalid\r\n");
+}
+
+#[tokio::test]
+async fn test_execute_set_too_few_argument() {
+    //input
+    let input = b"*2\r\n$3\r\nSET\r\n$3\r\nkey\r\n";
+
+    // db setup
+    let store = Arc::new(DB::new(tempfile::tempdir().unwrap().path()).unwrap());
+
+    // cmd parse and execute
+    let cmd = parse_test_command(input).await;
+    let r = execute_test_command(cmd, store).await;
+
+    // assert
+    assert_eq!(r, b"-ERR Wrong number of arguments for \"set\" command; Needed at least 3 arguments, Received 2 arguments\r\n");
+}
+
+#[tokio::test]
+async fn test_execute_set_too_many_argument() {
+    //input
+    let input = b"*5\r\n$3\r\nSET\r\n$1\r\na\r\n$1\r\nb\r\n$1\r\nc\r\n$1\r\nd\r\n";
+
+    // db setup
+    let store = Arc::new(DB::new(tempfile::tempdir().unwrap().path()).unwrap());
+
+    // cmd parse and execute
+    let cmd = parse_test_command(input).await;
+    let r = execute_test_command(cmd, store).await;
+
+    // assert
+    assert_eq!(r, b"-ERR Wrong number of arguments for \"set\" command; Needed at least 3 arguments, Received 5 arguments\r\n");
+}
+// -----------------------------------ERROR TESTS
+
+
