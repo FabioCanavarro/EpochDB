@@ -33,29 +33,6 @@ async fn execute_test_command(input: ParsedResponse, store: Arc<DB>) -> Vec<u8> 
     c.get_ref().to_vec()
 }
 
-/* NOTE: Easily copyable format type shi
-
-#[tokio::test]
-async fn test_execute_~_simple() {
-    //Input
-    let input = b"";
-
-    // DB SETUP
-    let store = Arc::new(DB::new(tempfile::tempdir().unwrap().path()).unwrap());
-
-    // DB Shenanigans
-
-    // Cmd parse and execute
-    let cmd = parse_test_command(input).await;
-    let r = execute_test_command(cmd, store).await;
-
-    // Assert
-    assert_eq!(r, b"");
-}
-
-*/
-
-// -----------------------------------NORMAL TESTS
 #[tokio::test]
 async fn test_execute_get_metadata_no_ttl() {
     //Input
@@ -373,27 +350,6 @@ async fn test_execute_set_ttl() {
     assert_eq!(store.get("key").unwrap(), None);
 }
 
-
-/* NOTE: Easily copyable format type shi
-
-#[tokio::test]
-async fn test_execute_~_~() {
-    //input
-    let input = b"";
-
-    // db setup
-    let store = arc::new(db::new(tempfile::tempdir().unwrap().path()).unwrap());
-
-    // cmd parse and execute
-    let cmd = parse_test_command(input).await;
-    let r = execute_test_command(cmd, store).await;
-
-    // assert
-    assert_eq!(r, b"");
-}
-
-*/
-
 #[tokio::test]
 async fn test_execute_invalid_command() {
     //Input
@@ -441,6 +397,3 @@ async fn test_execute_set_too_many_argument() {
     // assert
     assert_eq!(r, b"-ERR Wrong number of arguments for \"set\" command; Needed at least 3 arguments, Received 5 arguments\r\n");
 }
-// -----------------------------------ERROR TESTS
-
-
