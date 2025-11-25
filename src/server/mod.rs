@@ -9,12 +9,12 @@ use std::time::Duration;
 use tokio::io::{
     AsyncRead,
     AsyncReadExt,
+    AsyncWrite,
     AsyncWriteExt,
     BufReader,
     BufWriter
 };
 use tokio::net::TcpStream;
-use tokio::net::tcp::WriteHalf;
 use tracing::{
     error,
     info,
@@ -199,10 +199,10 @@ pub async fn parse_command<T: AsyncReadExt + AsyncRead + Unpin>(
     })
 }
 
-pub async fn execute_commands(
+pub async fn execute_commands<T: AsyncWrite + AsyncWriteExt + Unpin>(
     parsed_reponse: ParsedResponse,
     store: &Arc<DB>,
-    stream: &mut BufWriter<WriteHalf<'_>>
+    stream: &mut BufWriter<T>
 ) -> Result<(), TransientError> {
     let cmd = parsed_reponse.command;
     let key = parsed_reponse.key;
@@ -350,8 +350,6 @@ pub async fn execute_commands(
                         })?
                 },
             };
-
-            todo!()
         },
         Command::Flush => {
             check_argument(cmd.into(), 1, parsed_reponse.len, None).await?;
