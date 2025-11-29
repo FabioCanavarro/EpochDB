@@ -1,6 +1,10 @@
 #![allow(unused_parens)]
-use clap::{Parser, Subcommand};
-use tokio::{io::AsyncWriteExt, net::TcpStream};
+use clap::{
+    Parser,
+    Subcommand
+};
+use tokio::io::AsyncWriteExt;
+use tokio::net::TcpStream;
 
 // Cli Parser
 #[derive(Parser)]
@@ -10,7 +14,7 @@ struct Cli {
     command: Option<Commands>,
 
     #[arg(short, long, default_value_t = ("127.0.0.1:8080".to_string()) )]
-    addr: String,
+    addr: String
 }
 
 #[derive(Subcommand)]
