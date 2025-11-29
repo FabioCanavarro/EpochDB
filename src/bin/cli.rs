@@ -1,4 +1,6 @@
+#![allow(unused_parens)]
 use clap::{Parser, Subcommand};
+use tokio::{io::AsyncWriteExt, net::TcpStream};
 
 // Cli Parser
 #[derive(Parser)]
@@ -7,7 +9,7 @@ struct Cli {
     #[command(subcommand)]
     command: Option<Commands>,
 
-    #[arg(short, long)]
+    #[arg(short, long, default_value_t = ("127.0.0.1:8080".to_string()) )]
     addr: String,
 }
 
@@ -38,6 +40,22 @@ enum Commands {
     Flush
 }
 
-fn main() {
-    todo!();
+#[tokio::main]
+async fn main() {
+    let cli = Cli::parse();
+
+    // Return the helping description if they didnt specify any arguments
+    if cli.command.is_none() {
+        Cli::parse_from(["kvs", "--help"]);
+        return;
+    }
+
+    // Bind to the address
+    let mut stream = match TcpStream::connect(&cli.addr).await {
+        Ok(stream) => stream,
+        Err(e) => {
+            panic!("ERROR: {}", e);
+        }
+    };
+    stream.write_i8(2).await.unwrap();
 }
