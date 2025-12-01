@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
+use clap::Parser;
 use epoch_db::server::response_handler;
 use epoch_db::server::utils::init_logger;
 use epoch_db::DB;
@@ -17,7 +18,6 @@ use tracing::{
     info,
     warn
 };
-use clap::Parser;
 
 // Cli Parser
 #[derive(Parser)]
