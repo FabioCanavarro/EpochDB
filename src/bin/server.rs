@@ -1,3 +1,5 @@
+#![allow(unused_parens)]
+
 use std::error::Error;
 use std::io;
 use std::path::PathBuf;
@@ -15,20 +17,34 @@ use tracing::{
     info,
     warn
 };
+use clap::Parser;
+
+// Cli Parser
+#[derive(Parser)]
+#[command(version, about)]
+struct Cli {
+    #[arg(short, long, default_value_t = ("127.0.0.1:8080".to_string()) )]
+    addr: String,
+
+    #[arg(short, long, default_value_t = ("./".to_string()) )]
+    path: String
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+    let cli = Cli::parse();
+
     init_logger();
 
     let mut counter: i8 = 0;
 
     // TODO: Make this configurable
-    let addr = "localhost:3001";
-    let listener = TcpListener::bind(addr).await?;
+    let addr = cli.addr;
+    let listener = TcpListener::bind(&addr).await?;
     info!("Listening to {}", addr);
 
     // TODO: LAZY STATIC DB
-    let store = Arc::new(DB::new(&PathBuf::from("./"))?); // TODO: Make path configurable
+    let store = Arc::new(DB::new(&PathBuf::from(cli.path))?); // TODO: Make path configurable
 
     loop {
         let stream_set = listener.accept().await;
