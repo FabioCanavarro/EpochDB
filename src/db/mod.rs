@@ -14,8 +14,8 @@ use std::io::{
 };
 use std::path::Path;
 use std::str::from_utf8;
-use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
 use std::thread::{
     self,
     JoinHandle
@@ -28,12 +28,12 @@ use std::time::{
 
 use chrono::Local;
 use errors::TransientError;
-use sled::Config;
 use sled::transaction::{
     ConflictableTransactionError,
     TransactionError,
     Transactional
 };
+use sled::Config;
 use zip::write::SimpleFileOptions;
 use zip::{
     ZipArchive,
@@ -42,8 +42,8 @@ use zip::{
 
 use crate::metrics::Metrics;
 use crate::{
-    DB,
-    Metadata
+    Metadata,
+    DB
 };
 
 impl DB {
