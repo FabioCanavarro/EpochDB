@@ -9,8 +9,8 @@ use tokio::io::{
 };
 use tracing::error;
 use tracing_subscriber::{
-    fmt,
-    EnvFilter
+    EnvFilter,
+    fmt
 };
 
 use crate::db::errors::TransientError;
