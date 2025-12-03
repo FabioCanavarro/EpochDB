@@ -10,7 +10,8 @@ use clap::Parser;
 use epoch_db::server::response_handler;
 use epoch_db::server::utils::init_logger;
 use epoch_db::DB;
-use tokio::{net::TcpListener, runtime::Builder};
+use tokio::net::TcpListener;
+use tokio::runtime::Builder;
 use tokio::spawn;
 use tokio::time::sleep;
 use tracing::{
@@ -31,13 +32,14 @@ struct Cli {
 
     #[arg(short, long)]
     workers: Option<usize>,
-    
-    /// Set the logging verbosity level "off" | "error" | "warn" | "info" | "debug" | "trace"
+
+    /// Set the logging verbosity level "off" | "error" | "warn" | "info" |
+    /// "debug" | "trace"
     #[arg(short, long, default_value_t = ("info".to_string()) )]
-    verbosity: String, // Accepts: "off", "error", "warn", "info", "debug", "trace"
+    verbosity: String // Accepts: "off", "error", "warn", "info", "debug", "trace"
 }
 
-fn main() -> Result<(), Box<dyn Error>>{
+fn main() -> Result<(), Box<dyn Error>> {
     let cli = Cli::parse();
 
     init_logger(cli.verbosity.clone());
