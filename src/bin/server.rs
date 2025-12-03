@@ -27,24 +27,29 @@ struct Cli {
     addr: String,
 
     #[arg(short, long, default_value_t = ("./".to_string()) )]
-    path: String
+    path: String,
+
+    #[arg(short, long)]
+    workers: Option<u64>,
+
+    #[arg(short, long, default_value_t = ("info".to_string()) )]
+    verbosity: String,
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let cli = Cli::parse();
 
-    init_logger();
+    init_logger(cli.verbosity);
 
     let mut counter: i8 = 0;
 
-    // TODO: Make this configurable
     let addr = cli.addr;
     let listener = TcpListener::bind(&addr).await?;
     info!("Listening to {}", addr);
 
     // TODO: LAZY STATIC DB
-    let store = Arc::new(DB::new(&PathBuf::from(cli.path))?); // TODO: Make path configurable
+    let store = Arc::new(DB::new(&PathBuf::from(cli.path))?);
 
     loop {
         let stream_set = listener.accept().await;

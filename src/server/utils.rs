@@ -40,8 +40,8 @@ pub async fn check_argument(
     Ok(())
 }
 
-pub fn init_logger() {
-    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+pub fn init_logger(default_val: String) {
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(default_val));
 
     fmt()
         .with_env_filter(filter)
