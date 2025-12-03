@@ -10,7 +10,7 @@ use clap::Parser;
 use epoch_db::server::response_handler;
 use epoch_db::server::utils::init_logger;
 use epoch_db::DB;
-use tokio::net::TcpListener;
+use tokio::{net::TcpListener, runtime::Builder};
 use tokio::spawn;
 use tokio::time::sleep;
 use tracing::{
@@ -30,19 +30,35 @@ struct Cli {
     path: String,
 
     #[arg(short, long)]
-    workers: Option<u64>,
-
+    workers: Option<usize>,
+    
+    /// Set the logging verbosity level "off" | "error" | "warn" | "info" | "debug" | "trace"
     #[arg(short, long, default_value_t = ("info".to_string()) )]
-    verbosity: String,
+    verbosity: String, // Accepts: "off", "error", "warn", "info", "debug", "trace"
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), Box<dyn Error>>{
     let cli = Cli::parse();
 
-    init_logger(cli.verbosity);
+    init_logger(cli.verbosity.clone());
 
+    let mut builder = Builder::new_multi_thread();
+
+    builder.enable_all();
+
+    if let Some(n) = cli.workers {
+        builder.worker_threads(n);
+    };
+
+    let runtime = builder.build()?;
+
+    runtime.block_on(async_main(cli))
+}
+
+async fn async_main(args: (Cli)) -> Result<(), Box<dyn Error>> {
     let mut counter: i8 = 0;
+
+    let cli = args;
 
     let addr = cli.addr;
     let listener = TcpListener::bind(&addr).await?;
