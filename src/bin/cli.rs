@@ -20,7 +20,11 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     /// Set a key-value pair
-    Set { key: String, val: String, ttl: Option<u64> },
+    Set {
+        key: String,
+        val: String,
+        ttl: Option<u64>
+    },
 
     /// Get the value for a key
     Get { key: String },
@@ -59,38 +63,42 @@ async fn main() {
         Ok(stream) => {
             let c = cli.command.unwrap();
             match c {
-                Commands::Set { key, val, ttl } => {
+                Commands::Set {
+                    key,
+                    val,
+                    ttl
+                } => {
                     match ttl {
                         Some(t) => {
                             let ts = t.to_string();
-                            let d = format!("*4\r\n$3\r\nSET\r\n${}\r\n{}\r\n${}\r\n{}\r\n${}\r\n{}\r\n", key.len(), key, val.len(), val, ts.len(), ts);
-                        }
-                        None => {
-
-                        }
-                    } 
+                            let d = format!(
+                                "*4\r\n$3\r\nSET\r\n${}\r\n{}\r\n${}\r\n{}\r\n${}\r\n{}\r\n",
+                                key.len(),
+                                key,
+                                val.len(),
+                                val,
+                                ts.len(),
+                                ts
+                            );
+                        },
+                        None => {}
+                    }
                 },
-                Commands::Rm { key } => {
-
-                },
-                Commands::Get { key } => {
-
-                },
-                Commands::GetMetadata { key } => {
-
-                },
-                Commands::IncrementFrequency { key } => {
-
-                },
-                Commands::Size => {
-
-                },
-                Commands::Flush => {
-
-                }
-                Commands::Ping => {
-
-                }
+                Commands::Rm {
+                    key
+                } => {},
+                Commands::Get {
+                    key
+                } => {},
+                Commands::GetMetadata {
+                    key
+                } => {},
+                Commands::IncrementFrequency {
+                    key
+                } => {},
+                Commands::Size => {},
+                Commands::Flush => {},
+                Commands::Ping => {}
             }
         },
         Err(e) => {
@@ -98,28 +106,3 @@ async fn main() {
         }
     };
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
