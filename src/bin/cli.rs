@@ -59,8 +59,8 @@ async fn main() {
     }
 
     // Bind to the address
-    let mut stream = match TcpStream::connect(&cli.addr).await {
-        Ok(stream) => {
+    let stream = match TcpStream::connect(&cli.addr).await {
+        Ok(mut stream) => {
             let c = cli.command.unwrap();
             match c {
                 Commands::Set {
@@ -80,6 +80,7 @@ async fn main() {
                                 ts.len(),
                                 ts
                             );
+                            stream.write_all(d.as_bytes()).await;
                         },
                         None => {}
                     }
