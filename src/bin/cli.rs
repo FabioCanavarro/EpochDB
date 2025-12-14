@@ -1,13 +1,13 @@
 #![allow(unused_parens)]
 
 use std::str::from_utf8;
-
+use std::io::Write;
 use clap::{
     Parser,
     Subcommand
 };
 use epoch_db::db::errors::TransientError;
-use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader, BufStream};
 use tokio::net::TcpStream;
 
 // Cli Parser
@@ -52,45 +52,64 @@ enum Commands {
     Flush
 }
 
-async fn tcp_logic(cli: Cli, mut stream: TcpStream) -> Result<String, TransientError> {
+#[derive(Debug)]
+struct Client {
+    stream: TcpStream,
+    buf: Vec<u8>
+}
+
+async fn tcp_logic(cli: Cli, mut client: Client) -> Result<String, TransientError> {
     let c = cli.command.unwrap();
+    let mut buf_stream = BufStream::new(client.stream);
     match c {
         Commands::Set {
             key,
             val,
             ttl
         } => {
-            let mut d = String::new();
             match ttl {
                 Some(t) => {
-                    let ts = t.to_string();
-                    d = format!(
+                    client.buf.clear();
+                    
+                    let t_len = (t as f64).log10() as usize + 1;
+                    write!(
+                        client.buf,
                         "*4\r\n$3\r\nSET\r\n${}\r\n{}\r\n${}\r\n{}\r\n${}\r\n{}\r\n",
                         key.len(),
                         key,
                         val.len(),
                         val,
-                        ts.len(),
-                        ts
-                    );
+                        t_len,
+                        t
+                    ).map_err(|e| TransientError::IOError { error: e })?;
+                    
+                    buf_stream.write_all_buf(&mut &client.buf[..])
+                        .await
+                        .map_err(|e| TransientError::IOError { error: e })?;
                 },
                 None => {
-                    d = format!(
+                    client.buf.clear();
+
+                    write!(
+                        client.buf,
                         "*3\r\n$3\r\nSET\r\n${}\r\n{}\r\n${}\r\n{}\r\n",
                         key.len(),
                         key,
                         val.len(),
                         val
-                    );
+                    ).map_err(|e| TransientError::IOError { error: e })?;
+
+                    buf_stream.write_all_buf(&mut &client.buf[..])
+                        .await
+                        .map_err(|e| TransientError::IOError { error: e })?;
                 }
             }
-            stream.write_all(d.as_bytes())
-                .await
-                .map_err(|e| TransientError::IOError { error: e })?;
-            let mut res_buf = Vec::new();
-            let mut stream_buf_reader = BufReader::new(stream);
-            stream_buf_reader.read_until(b'\n', &mut res_buf).await.map_err(|e| TransientError::IOError { error: e })?;
-            let res = from_utf8(&res_buf).map_err(|_| TransientError::ParsingToUTF8Error)?;
+            buf_stream.flush().await.map_err(|e| TransientError::IOError { error: e })?;
+
+            client.buf.clear();
+
+            buf_stream.read_until(b'\n', &mut client.buf).await.map_err(|e| TransientError::IOError { error: e })?;
+            let res = from_utf8(&client.buf).map_err(|_| TransientError::ParsingToUTF8Error)?;
             Ok(String::from(res))
         },
         Commands::Rm {
@@ -124,7 +143,11 @@ async fn main() {
     // Bind to the address
     let stream = match TcpStream::connect(&cli.addr).await {
         Ok(stream) => {
-            tcp_logic(cli, stream).await
+            let client =Client {
+                stream,
+                buf: Vec::new()
+            };
+            tcp_logic(cli, client).await
         },
         Err(e) => {
             Err(e).map_err(|e| TransientError::IOError { error: e })
