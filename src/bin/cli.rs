@@ -1,13 +1,23 @@
 #![allow(unused_parens)]
 
-use std::str::from_utf8;
 use std::io::Write;
+use std::str::from_utf8;
+
 use clap::{
     Parser,
     Subcommand
 };
 use epoch_db::db::errors::TransientError;
-use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader, BufStream};
+use tokio::io::{
+    AsyncBufRead,
+    AsyncBufReadExt,
+    AsyncRead,
+    AsyncReadExt,
+    AsyncWrite,
+    AsyncWriteExt,
+    BufReader,
+    BufStream
+};
 use tokio::net::TcpStream;
 
 // Cli Parser
@@ -70,7 +80,7 @@ async fn tcp_logic(cli: Cli, mut client: Client) -> Result<String, TransientErro
             match ttl {
                 Some(t) => {
                     client.buf.clear();
-                    
+
                     let t_len = (t as f64).log10() as usize + 1;
                     write!(
                         client.buf,
@@ -81,11 +91,21 @@ async fn tcp_logic(cli: Cli, mut client: Client) -> Result<String, TransientErro
                         val,
                         t_len,
                         t
-                    ).map_err(|e| TransientError::IOError { error: e })?;
-                    
-                    buf_stream.write_all_buf(&mut &client.buf[..])
+                    )
+                    .map_err(|e| {
+                        TransientError::IOError {
+                            error: e
+                        }
+                    })?;
+
+                    buf_stream
+                        .write_all_buf(&mut &client.buf[..])
                         .await
-                        .map_err(|e| TransientError::IOError { error: e })?;
+                        .map_err(|e| {
+                            TransientError::IOError {
+                                error: e
+                            }
+                        })?;
                 },
                 None => {
                     client.buf.clear();
@@ -97,36 +117,71 @@ async fn tcp_logic(cli: Cli, mut client: Client) -> Result<String, TransientErro
                         key,
                         val.len(),
                         val
-                    ).map_err(|e| TransientError::IOError { error: e })?;
+                    )
+                    .map_err(|e| {
+                        TransientError::IOError {
+                            error: e
+                        }
+                    })?;
 
-                    buf_stream.write_all_buf(&mut &client.buf[..])
+                    buf_stream
+                        .write_all_buf(&mut &client.buf[..])
                         .await
-                        .map_err(|e| TransientError::IOError { error: e })?;
+                        .map_err(|e| {
+                            TransientError::IOError {
+                                error: e
+                            }
+                        })?;
                 }
             }
-            buf_stream.flush().await.map_err(|e| TransientError::IOError { error: e })?;
+            buf_stream.flush().await.map_err(|e| {
+                TransientError::IOError {
+                    error: e
+                }
+            })?;
 
             client.buf.clear();
 
-            buf_stream.read_until(b'\n', &mut client.buf).await.map_err(|e| TransientError::IOError { error: e })?;
+            buf_stream
+                .read_until(b'\n', &mut client.buf)
+                .await
+                .map_err(|e| {
+                    TransientError::IOError {
+                        error: e
+                    }
+                })?;
             let res = from_utf8(&client.buf).map_err(|_| TransientError::ParsingToUTF8Error)?;
             Ok(String::from(res))
         },
         Commands::Rm {
             key
-        } => {todo!()},
+        } => {
+            todo!()
+        },
         Commands::Get {
             key
-        } => {todo!()},
+        } => {
+            todo!()
+        },
         Commands::GetMetadata {
             key
-        } => {todo!()},
+        } => {
+            todo!()
+        },
         Commands::IncrementFrequency {
             key
-        } => {todo!()},
-        Commands::Size => {todo!()},
-        Commands::Flush => {todo!()},
-        Commands::Ping => {todo!()}
+        } => {
+            todo!()
+        },
+        Commands::Size => {
+            todo!()
+        },
+        Commands::Flush => {
+            todo!()
+        },
+        Commands::Ping => {
+            todo!()
+        }
     }
 }
 
@@ -143,48 +198,28 @@ async fn main() {
     // Bind to the address
     let stream = match TcpStream::connect(&cli.addr).await {
         Ok(stream) => {
-            let client =Client {
+            let client = Client {
                 stream,
                 buf: Vec::new()
             };
             tcp_logic(cli, client).await
         },
         Err(e) => {
-            Err(e).map_err(|e| TransientError::IOError { error: e })
-        }
+            Err(e).map_err(|e| {
+                TransientError::IOError {
+                    error: e
+                }
+            })
+        },
     };
 
     // Matches the error from stream
     match stream {
         Ok(_) => {
             todo!()
-        }
+        },
         Err(_) => {
             todo!()
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
