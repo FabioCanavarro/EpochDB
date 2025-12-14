@@ -1,8 +1,11 @@
 #![allow(unused_parens)]
+use std::error::Error;
+
 use clap::{
     Parser,
     Subcommand
 };
+use epoch_db::db::errors::TransientError;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
 
@@ -48,6 +51,51 @@ enum Commands {
     Flush
 }
 
+async fn tcp_logic(cli: Cli, mut stream: TcpStream) -> Result<(), TransientError> {
+    let c = cli.command.unwrap();
+    match c {
+        Commands::Set {
+            key,
+            val,
+            ttl
+        } => {
+            match ttl {
+                Some(t) => {
+                    let ts = t.to_string();
+                    let d = format!(
+                        "*4\r\n$3\r\nSET\r\n${}\r\n{}\r\n${}\r\n{}\r\n${}\r\n{}\r\n",
+                        key.len(),
+                        key,
+                        val.len(),
+                        val,
+                        ts.len(),
+                        ts
+                    );
+                    stream.write_all(d.as_bytes())
+                        .await
+                        .map_err(|e| TransientError::IOError { error: e })
+                },
+                None => {todo!()}
+            }
+        },
+        Commands::Rm {
+            key
+        } => {todo!()},
+        Commands::Get {
+            key
+        } => {todo!()},
+        Commands::GetMetadata {
+            key
+        } => {todo!()},
+        Commands::IncrementFrequency {
+            key
+        } => {todo!()},
+        Commands::Size => {todo!()},
+        Commands::Flush => {todo!()},
+        Commands::Ping => {todo!()}
+    }
+}
+
 #[tokio::main]
 async fn main() {
     let cli = Cli::parse();
@@ -60,50 +108,45 @@ async fn main() {
 
     // Bind to the address
     let stream = match TcpStream::connect(&cli.addr).await {
-        Ok(mut stream) => {
-            let c = cli.command.unwrap();
-            match c {
-                Commands::Set {
-                    key,
-                    val,
-                    ttl
-                } => {
-                    match ttl {
-                        Some(t) => {
-                            let ts = t.to_string();
-                            let d = format!(
-                                "*4\r\n$3\r\nSET\r\n${}\r\n{}\r\n${}\r\n{}\r\n${}\r\n{}\r\n",
-                                key.len(),
-                                key,
-                                val.len(),
-                                val,
-                                ts.len(),
-                                ts
-                            );
-                            stream.write_all(d.as_bytes()).await;
-                        },
-                        None => {}
-                    }
-                },
-                Commands::Rm {
-                    key
-                } => {},
-                Commands::Get {
-                    key
-                } => {},
-                Commands::GetMetadata {
-                    key
-                } => {},
-                Commands::IncrementFrequency {
-                    key
-                } => {},
-                Commands::Size => {},
-                Commands::Flush => {},
-                Commands::Ping => {}
-            }
+        Ok(stream) => {
+            tcp_logic(cli, stream).await
         },
         Err(e) => {
-            panic!("ERROR: {}", e);
+            Err(e).map_err(|e| TransientError::IOError { error: e })
         }
     };
+
+    // Matches the error from stream
+    match stream {
+        Ok(_) => {
+            todo!()
+        }
+        Err(_) => {
+            todo!()
+        }
+    }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
