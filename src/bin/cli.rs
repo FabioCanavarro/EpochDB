@@ -1,12 +1,13 @@
 #![allow(unused_parens)]
-use std::error::Error;
+
+use std::str::from_utf8;
 
 use clap::{
     Parser,
     Subcommand
 };
 use epoch_db::db::errors::TransientError;
-use tokio::io::AsyncWriteExt;
+use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::net::TcpStream;
 
 // Cli Parser
@@ -51,7 +52,7 @@ enum Commands {
     Flush
 }
 
-async fn tcp_logic(cli: Cli, mut stream: TcpStream) -> Result<(), TransientError> {
+async fn tcp_logic(cli: Cli, mut stream: TcpStream) -> Result<String, TransientError> {
     let c = cli.command.unwrap();
     match c {
         Commands::Set {
@@ -59,10 +60,11 @@ async fn tcp_logic(cli: Cli, mut stream: TcpStream) -> Result<(), TransientError
             val,
             ttl
         } => {
+            let mut d = String::new();
             match ttl {
                 Some(t) => {
                     let ts = t.to_string();
-                    let d = format!(
+                    d = format!(
                         "*4\r\n$3\r\nSET\r\n${}\r\n{}\r\n${}\r\n{}\r\n${}\r\n{}\r\n",
                         key.len(),
                         key,
@@ -71,12 +73,25 @@ async fn tcp_logic(cli: Cli, mut stream: TcpStream) -> Result<(), TransientError
                         ts.len(),
                         ts
                     );
-                    stream.write_all(d.as_bytes())
-                        .await
-                        .map_err(|e| TransientError::IOError { error: e })
                 },
-                None => {todo!()}
+                None => {
+                    d = format!(
+                        "*3\r\n$3\r\nSET\r\n${}\r\n{}\r\n${}\r\n{}\r\n",
+                        key.len(),
+                        key,
+                        val.len(),
+                        val
+                    );
+                }
             }
+            stream.write_all(d.as_bytes())
+                .await
+                .map_err(|e| TransientError::IOError { error: e })?;
+            let mut res_buf = Vec::new();
+            let mut stream_buf_reader = BufReader::new(stream);
+            stream_buf_reader.read_until(b'\n', &mut res_buf).await.map_err(|e| TransientError::IOError { error: e })?;
+            let res = from_utf8(&res_buf).map_err(|_| TransientError::ParsingToUTF8Error)?;
+            Ok(String::from(res))
         },
         Commands::Rm {
             key
