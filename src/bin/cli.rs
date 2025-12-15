@@ -9,13 +9,8 @@ use clap::{
 };
 use epoch_db::db::errors::TransientError;
 use tokio::io::{
-    AsyncBufRead,
     AsyncBufReadExt,
-    AsyncRead,
-    AsyncReadExt,
-    AsyncWrite,
     AsyncWriteExt,
-    BufReader,
     BufStream
 };
 use tokio::net::TcpStream;
@@ -77,22 +72,31 @@ async fn tcp_logic(cli: Cli, mut client: Client) -> Result<String, TransientErro
             val,
             ttl
         } => {
+            // Initiate a the key and value as ref, so i do not need to keep calling .as_ref()
             let k: &[u8] = key.as_ref();
             let v: &[u8] = val.as_ref();
+
+            // Clear the buffer, to use the buffer
             client.buf.clear();
+
+            // Get the number of elements that will be sent
             let count = if ttl.is_some() { 4 } else { 3 };
+
+            // Write the initial header, the number of elements and the command
             write!(client.buf, "*{}\r\n$3\r\nSET\r\n", count).map_err(|e| {
                 TransientError::IOError {
                     error: e
                 }
             })?;
 
+            // Writing the length of the next element
             write!(client.buf, "${}\r\n", k.len()).map_err(|e| {
                 TransientError::IOError {
                     error: e
                 }
             })?;
 
+            // Extending the client.buf instead of using write! to ensure binary safety
             client.buf.extend_from_slice(k);
             write!(client.buf, "\r\n").map_err(|e| {
                 TransientError::IOError {
@@ -112,8 +116,12 @@ async fn tcp_logic(cli: Cli, mut client: Client) -> Result<String, TransientErro
                     error: e
                 }
             })?;
-
+            
+            // Checks if the ttl is None
             if let Some(t) = ttl {
+                // Get the lenght of the ttl, by getting the number of digits in the ttl, by simply
+                // taking the log10 of the ttl and ignoring the decimals
+                // 120; log10(120) = 2.xxxx => 2 => 2+1 == 3, 120 has 3 digit
                 let t_len = (t as f64).log10() as usize + 1;
                 write!(client.buf, "${}\r\n", t_len).map_err(|e| {
                     TransientError::IOError {
@@ -129,6 +137,7 @@ async fn tcp_logic(cli: Cli, mut client: Client) -> Result<String, TransientErro
                 })?;
             }
 
+            // Write the buffer into the stream
             buf_stream.write_all(&client.buf).await.map_err(|e| {
                 TransientError::IOError {
                     error: e
