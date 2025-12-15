@@ -72,7 +72,8 @@ async fn tcp_logic(cli: Cli, mut client: Client) -> Result<String, TransientErro
             val,
             ttl
         } => {
-            // Initiate a the key and value as ref, so i do not need to keep calling .as_ref()
+            // Initiate a the key and value as ref, so i do not need to keep calling
+            // .as_ref()
             let k: &[u8] = key.as_ref();
             let v: &[u8] = val.as_ref();
 
@@ -116,21 +117,29 @@ async fn tcp_logic(cli: Cli, mut client: Client) -> Result<String, TransientErro
                     error: e
                 }
             })?;
-            
+
             // checks if the ttl is none
             if let Some(t) = ttl {
-                // get the lenght of the ttl, by getting the number of digits in the ttl, by simply
-                // taking the log10 of the ttl and ignoring the decimals
+                // get the lenght of the ttl, by getting the number of digits in the ttl, by
+                // simply taking the log10 of the ttl and ignoring the decimals
                 // 120; log10(120) = 2.xxxx => 2 => 2+1 == 3, 120 has 3 digit
                 // It also handles where t = 0, which may crash shit
-                let t_len = if t > 0 {(t as f64).log10() as usize + 1} else {1};
+                let t_len = if t > 0 {
+                    (t as f64).log10() as usize + 1
+                } else {
+                    1
+                };
                 write!(client.buf, "${}\r\n", t_len).map_err(|e| {
                     TransientError::IOError {
                         error: e
                     }
                 })?;
 
-                write!(client.buf, "{}\r\n", t).map_err(|e| TransientError::IOError { error: e })?;
+                write!(client.buf, "{}\r\n", t).map_err(|e| {
+                    TransientError::IOError {
+                        error: e
+                    }
+                })?;
             }
 
             // Write the buffer into the stream
@@ -160,7 +169,7 @@ async fn tcp_logic(cli: Cli, mut client: Client) -> Result<String, TransientErro
                         error: e
                     }
                 })?;
-            
+
             // Convert the response into a string
             let res = from_utf8(&client.buf).map_err(|_| TransientError::ParsingToUTF8Error)?;
 
