@@ -77,71 +77,84 @@ async fn tcp_logic(cli: Cli, mut client: Client) -> Result<String, TransientErro
             val,
             ttl
         } => {
-            match ttl {
-                Some(t) => {
-                    client.buf.clear();
-
-                    let t_len = (t as f64).log10() as usize + 1;
-                    write!(
-                        client.buf,
-                        "*4\r\n$3\r\nSET\r\n${}\r\n{}\r\n${}\r\n{}\r\n${}\r\n{}\r\n",
-                        key.len(),
-                        key,
-                        val.len(),
-                        val,
-                        t_len,
-                        t
-                    )
-                    .map_err(|e| {
-                        TransientError::IOError {
-                            error: e
-                        }
-                    })?;
-
-                    buf_stream
-                        .write_all_buf(&mut &client.buf[..])
-                        .await
-                        .map_err(|e| {
+            let k: &[u8] = key.as_ref();
+            let v: &[u8] = val.as_ref();
+            client.buf.clear();
+            let count = if ttl.is_some() {4} else {3};
+            write!(
+                client.buf,
+                "*{}\r\n$3\r\nSET\r\n",
+                count
+            ).map_err(|e| {
                             TransientError::IOError {
                                 error: e
                             }
                         })?;
-                },
-                None => {
-                    client.buf.clear();
 
-                    write!(
-                        client.buf,
-                        "*3\r\n$3\r\nSET\r\n${}\r\n{}\r\n${}\r\n{}\r\n",
-                        key.len(),
-                        key,
-                        val.len(),
-                        val
-                    )
-                    .map_err(|e| {
-                        TransientError::IOError {
-                            error: e
-                        }
-                    })?;
-
-                    buf_stream
-                        .write_all_buf(&mut &client.buf[..])
-                        .await
-                        .map_err(|e| {
+            write!(client.buf, "${}\r\n", k.len()).map_err(|e| {
                             TransientError::IOError {
                                 error: e
                             }
                         })?;
-                }
+
+            client.buf.extend_from_slice(k);
+            write!(client.buf, "\r\n").map_err(|e| {
+                            TransientError::IOError {
+                                error: e
+                            }
+                        })?;
+            
+            write!(client.buf, "${}\r\n", v.len()).map_err(|e| {
+                            TransientError::IOError {
+                                error: e
+                            }
+                        })?;
+
+            client.buf.extend_from_slice(v);
+            write!(client.buf, "\r\n").map_err(|e| {
+                            TransientError::IOError {
+                                error: e
+                            }
+                        })?;
+
+            
+            if let Some(t) = ttl {
+                let t_len = (t as f64).log10() as usize + 1;
+                write!(client.buf, "${}\r\n", t_len).map_err(|e| {
+                            TransientError::IOError {
+                                error: e
+                            }
+                        })?;
+
+                client.buf.extend_from_slice(&t.to_ne_bytes());
+                write!(client.buf, "\r\n").map_err(|e| {
+                                TransientError::IOError {
+                                    error: e
+                                }
+                            })?;                
             }
+
+            buf_stream
+                .write_all(&client.buf)
+                .await
+                .map_err(|e| {
+                    TransientError::IOError {
+                        error: e
+                    }
+                })?;
+
+            // Flush the stream to make sure that, data fully gets through the stream
             buf_stream.flush().await.map_err(|e| {
                 TransientError::IOError {
                     error: e
                 }
             })?;
 
+            // Clearing the buffer, to be able to allocate the data
             client.buf.clear();
 
+            // Read from the stream
+            //TODO: Dont use '\n' try to ehh use other tricks
             buf_stream
                 .read_until(b'\n', &mut client.buf)
                 .await
