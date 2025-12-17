@@ -56,7 +56,8 @@ pub enum TransientError {
         command: String,
         expected: u32,
         received: u32
-    }
+    },
+    ProtocolError
 }
 
 impl Display for TransientError {
@@ -103,6 +104,9 @@ impl Display for TransientError {
                     f,
                     "Wrong number of arguments for \"{command}\" command; Needed {expected} arguments, Received {received} arguments"
                 )
+            },
+            TransientError::ProtocolError => {
+                writeln!(f, "Wrong formatting protocol used")
             }
         }
     }
