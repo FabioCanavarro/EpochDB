@@ -27,6 +27,7 @@ pub mod db;
 pub mod metadata;
 pub mod metrics;
 pub mod server;
+pub mod protocol;
 
 /// This is the main struct which represents the database.
 ///
