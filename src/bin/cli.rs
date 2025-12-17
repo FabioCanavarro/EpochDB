@@ -8,9 +8,15 @@ use clap::{
     Subcommand
 };
 use epoch_db::db::errors::TransientError;
-use epoch_db::protocol::{parse_bulk_string, parse_integer};
+use epoch_db::protocol::{
+    parse_bulk_string,
+    parse_integer
+};
 use tokio::io::{
-    AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufStream
+    AsyncBufReadExt,
+    AsyncReadExt,
+    AsyncWriteExt,
+    BufStream
 };
 use tokio::net::TcpStream;
 
@@ -62,8 +68,15 @@ struct Client {
     buf: Vec<u8>
 }
 
-async fn parse_server_response(mut stream: BufStream<TcpStream>, buf: Vec<u8>) -> Result<(), TransientError>{
-    let first = stream.read_u8().await.map_err(|e| TransientError::IOError { error: e })?;
+async fn parse_server_response(
+    mut stream: BufStream<TcpStream>,
+    buf: Vec<u8>
+) -> Result<(), TransientError> {
+    let first = stream.read_u8().await.map_err(|e| {
+        TransientError::IOError {
+            error: e
+        }
+    })?;
     buf.clear();
 
     match first {
@@ -82,9 +95,7 @@ async fn parse_server_response(mut stream: BufStream<TcpStream>, buf: Vec<u8>) -
         b'*' => {
             todo!()
         },
-        _ => {
-            Err(TransientError::ProtocolError)?
-        }
+        _ => Err(TransientError::ProtocolError)?
     }
 
     Ok(())

@@ -12,6 +12,9 @@ use tracing::error;
 use crate::db::errors::TransientError;
 use crate::server::CLIENT_COMMAND_SIZE;
 
+// TODO: Use a generic of BUf reader,
+// Imagine bro, <W>(<T>)
+// It be so fucking hilarious lmao
 
 /// A helper function to read a line terminated by '\n' and parse it as a u64
 pub async fn parse_integer<T: AsyncReadExt + AsyncRead + Unpin>(

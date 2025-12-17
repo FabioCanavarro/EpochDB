@@ -26,8 +26,8 @@ use sled::Tree;
 pub mod db;
 pub mod metadata;
 pub mod metrics;
-pub mod server;
 pub mod protocol;
+pub mod server;
 
 /// This is the main struct which represents the database.
 ///
