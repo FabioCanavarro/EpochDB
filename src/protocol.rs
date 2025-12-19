@@ -144,11 +144,11 @@ pub async fn parse_bulk_string<T: AsyncRead + AsyncReadExt + Unpin + AsyncBufRea
     Ok(data_buf)
 }
 
-/// Parses a single Bulk String from the stream (e.g., "$5\r\nhello\r\n") to a
+/// Parses a single Bulk String from the stream an i64 len (e.g., "hello\r\n") to a
 /// Vec<u8>
 pub async fn parse_bulk_string_pure<T: AsyncRead + AsyncReadExt + Unpin + AsyncBufReadExt>(
-    len: u64,
-    stream: &mut T
+    stream: &mut T,
+    len: i64
 ) -> Result<Vec<u8>, TransientError> {
     // Read exactly `len` bytes for the data
     let mut data_buf = vec![0; len as usize];
@@ -189,4 +189,40 @@ pub async fn parse_bulk_string_pure<T: AsyncRead + AsyncReadExt + Unpin + AsyncB
 
     // Convert the data bytes to a String
     Ok(data_buf)
+}
+
+/// A helper function to read a line terminated by '\n' and parse it as a i64
+pub async fn parse_integer_i64<T: AsyncReadExt + AsyncRead + Unpin + AsyncBufReadExt>(
+    stream: &mut T
+) -> Result<i64, TransientError> {
+    let mut buffer = Vec::new();
+    match stream.read_until(b'\n', &mut buffer).await {
+        Ok(_) => (),
+        Err(e) => {
+            match e.kind() {
+                ErrorKind::UnexpectedEof => return Err(TransientError::ClientDisconnected),
+                _ => {
+                    return Err(TransientError::IOError {
+                        error: e
+                    });
+                }
+            }
+        },
+    };
+
+    // Check if the byte received contains a "\r\n" in the last 2 char
+    if buffer.len() < 2 || &buffer[buffer.len() - 2..] != b"\r\n" {
+        return Err(TransientError::InvalidCommand);
+    }
+
+    // Remove the "\r\n" from the command
+    buffer.truncate(buffer.len() - 2);
+
+    // Convert the bytes to a string
+    let num_str = from_utf8(&buffer).map_err(|_| TransientError::ParsingToUTF8Error)?;
+
+    // Parse the string into a number
+    num_str
+        .parse::<i64>()
+        .map_err(|_| TransientError::InvalidCommand)
 }

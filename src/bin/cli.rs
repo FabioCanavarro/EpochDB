@@ -9,7 +9,7 @@ use clap::{
 };
 use epoch_db::db::errors::TransientError;
 use epoch_db::protocol::{
-    Response, parse_bulk_string, parse_integer
+    Response, parse_bulk_string, parse_bulk_string_pure, parse_integer, parse_integer_i64
 };
 use tokio::io::{
     AsyncBufReadExt,
@@ -92,13 +92,18 @@ async fn parse_server_response(
             Ok(Response::Integer(res.await?))
         },
         b'$' => {
-            let l = parse_integer(&mut stream);
-            let res = parse_bulk_string(&mut stream);
-
-            todo!()
+            let l = parse_integer_i64(&mut stream).await?;
+            if l == -1 {
+                Ok(Response::Null)
+            }
+            else {
+                let res = parse_bulk_string_pure(&mut stream, l);
+                Ok(Response::BulkString(res.await?))
+            }
         },
         b'*' => {
             todo!()
+
         },
         _ => Err(TransientError::ProtocolError)?
     }
