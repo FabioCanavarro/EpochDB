@@ -5,12 +5,33 @@ use tokio::io::{
     AsyncBufReadExt,
     AsyncRead,
     AsyncReadExt,
-    BufReader
 };
+
 use tracing::error;
 
 use crate::db::errors::TransientError;
 use crate::server::CLIENT_COMMAND_SIZE;
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum Response {
+    /// (+OK, +PONG) - Usually status messages
+    SimpleString(String), 
+
+    /// (:1000) - For counters, TTLs
+    Integer(u64), 
+
+    /// ($5\r\nvalue) - The actual binary-safe data
+    BulkString(Vec<u8>), 
+
+    /// ($-1) - Key not found
+    Null, 
+
+    /// (*2\r\n...) - Nested responses (Used for GET_METADATA)
+    Array(Vec<Response>), 
+
+    /// (-ERR ...) - Protocol level errors
+    Error(String), 
+}
 
 /// A helper function to read a line terminated by '\n' and parse it as a u64
 pub async fn parse_integer<T: AsyncReadExt + AsyncRead + Unpin + AsyncBufReadExt>(
