@@ -107,7 +107,7 @@ async fn parse_server_response(
             let l = parse_integer(stream).await?;
 
             for i in 0..l {
-                let val = parse_server_response(stream, buf);
+                let val = Box::pin(parse_server_response(stream, buf));
                 res_v.push(val.await?)
             }
 
