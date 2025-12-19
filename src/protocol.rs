@@ -12,13 +12,9 @@ use tracing::error;
 use crate::db::errors::TransientError;
 use crate::server::CLIENT_COMMAND_SIZE;
 
-// TODO: Use a generic of BUf reader,
-// Imagine bro, <W>(<T>)
-// It be so fucking hilarious lmao
-
 /// A helper function to read a line terminated by '\n' and parse it as a u64
-pub async fn parse_integer<T: AsyncReadExt + AsyncRead + Unpin>(
-    stream: &mut BufReader<T>
+pub async fn parse_integer<T: AsyncReadExt + AsyncRead + Unpin + AsyncBufReadExt>(
+    stream: &mut T
 ) -> Result<u64, TransientError> {
     let mut buffer = Vec::new();
     match stream.read_until(b'\n', &mut buffer).await {
@@ -54,8 +50,8 @@ pub async fn parse_integer<T: AsyncReadExt + AsyncRead + Unpin>(
 
 /// Parses a single Bulk String from the stream (e.g., "$5\r\nhello\r\n") to a
 /// Vec<u8>
-pub async fn parse_bulk_string<T: AsyncRead + AsyncReadExt + Unpin>(
-    stream: &mut BufReader<T>
+pub async fn parse_bulk_string<T: AsyncRead + AsyncReadExt + Unpin + AsyncBufReadExt>(
+    stream: &mut T
 ) -> Result<Vec<u8>, TransientError> {
     let first_byte = match stream.read_u8().await {
         Ok(t) => t,

@@ -70,11 +70,10 @@ struct Client {
 
 async fn parse_server_response(
     mut stream: BufStream<TcpStream>,
-    buf: Vec<u8>
+    mut buf: Vec<u8>
 ) -> Result<(), TransientError> {
     let first = stream.read_u8().await.map_err(|e| {
-        TransientError::IOError {
-            error: e
+        TransientError::IOError { error: e
         }
     })?;
     buf.clear();
@@ -87,10 +86,10 @@ async fn parse_server_response(
             let res = stream.read_until(b'\n', &mut buf);
         },
         b':' => {
-            let res = parse_integer(stream);
+            let res = parse_integer(&mut stream);
         },
         b'$' => {
-            let res = parse_bulk_string(stream);
+            let res = parse_bulk_string(&mut stream);
         },
         b'*' => {
             todo!()
