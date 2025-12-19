@@ -85,14 +85,14 @@ async fn parse_server_response(
         b'-' => {
             let res = stream.read_until(b'\n', &mut buf);
 
-            todo!()
+            Ok(Response::Error(res.await.map_err(|e| TransientError::IOError { error: e })?.to_string()))
         },
         b':' => {
             let res = parse_integer(&mut stream);
-
-            todo!()
+            Ok(Response::Integer(res.await?))
         },
         b'$' => {
+            let l = parse_integer(&mut stream);
             let res = parse_bulk_string(&mut stream);
 
             todo!()

@@ -143,3 +143,50 @@ pub async fn parse_bulk_string<T: AsyncRead + AsyncReadExt + Unpin + AsyncBufRea
     // Convert the data bytes to a String
     Ok(data_buf)
 }
+
+/// Parses a single Bulk String from the stream (e.g., "$5\r\nhello\r\n") to a
+/// Vec<u8>
+pub async fn parse_bulk_string_pure<T: AsyncRead + AsyncReadExt + Unpin + AsyncBufReadExt>(
+    len: u64,
+    stream: &mut T
+) -> Result<Vec<u8>, TransientError> {
+    // Read exactly `len` bytes for the data
+    let mut data_buf = vec![0; len as usize];
+    match stream.read_exact(&mut data_buf).await {
+        Ok(_) => (),
+        Err(e) => {
+            match e.kind() {
+                ErrorKind::UnexpectedEof => return Err(TransientError::ClientDisconnected),
+                _ => {
+                    return Err(TransientError::IOError {
+                        error: e
+                    });
+                }
+            }
+        },
+    };
+
+    // The data is followed by a final "\r\n". We must consume this
+    // Read 2 bytes for the CRLF
+    let mut crlf_buf = [0; 2];
+    match stream.read_exact(&mut crlf_buf).await {
+        Ok(_) => (),
+        Err(e) => {
+            match e.kind() {
+                ErrorKind::UnexpectedEof => return Err(TransientError::ClientDisconnected),
+                _ => {
+                    return Err(TransientError::IOError {
+                        error: e
+                    });
+                }
+            }
+        },
+    };
+
+    if crlf_buf != *b"\r\n" {
+        return Err(TransientError::InvalidCommand);
+    }
+
+    // Convert the data bytes to a String
+    Ok(data_buf)
+}
