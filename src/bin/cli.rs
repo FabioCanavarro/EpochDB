@@ -83,28 +83,26 @@ async fn parse_server_response(
 
     match first {
         b'+' => {
-            let res = stream.read_until(b'\n', buf);
-            Ok(Response::SimpleString(
-                res.await
+            let res = stream.read_until(b'\n', buf).await
                     .map_err(|e| {
                         TransientError::IOError {
                             error: e
                         }
-                    })?
-                    .to_string()
+                    })?;
+            Ok(Response::SimpleString(
+                from_utf8(buf).map_err(|_| TransientError::ParsingToUTF8Error)?.trim_end().to_string()
             ))
         },
         b'-' => {
-            let res = stream.read_until(b'\n', buf);
-
-            Ok(Response::Error(
-                res.await
+            let res = stream.read_until(b'\n', buf).await
                     .map_err(|e| {
                         TransientError::IOError {
                             error: e
                         }
-                    })?
-                    .to_string()
+                    })?;
+
+            Ok(Response::Error(
+                from_utf8(buf).map_err(|_| TransientError::ParsingToUTF8Error)?.trim_end().to_string()
             ))
         },
         b':' => {
