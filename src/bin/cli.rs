@@ -9,7 +9,10 @@ use clap::{
 };
 use epoch_db::db::errors::TransientError;
 use epoch_db::protocol::{
-    Response, parse_bulk_string_pure, parse_integer, parse_integer_i64
+    parse_bulk_string_pure,
+    parse_integer,
+    parse_integer_i64,
+    Response
 };
 use tokio::io::{
     AsyncBufReadExt,
@@ -72,7 +75,8 @@ async fn parse_server_response(
     buf: &mut Vec<u8>
 ) -> Result<Response, TransientError> {
     let first = stream.read_u8().await.map_err(|e| {
-        TransientError::IOError { error: e
+        TransientError::IOError {
+            error: e
         }
     })?;
     buf.clear();
@@ -80,12 +84,28 @@ async fn parse_server_response(
     match first {
         b'+' => {
             let res = stream.read_until(b'\n', buf);
-            Ok(Response::SimpleString(res.await.map_err(|e| TransientError::IOError { error: e })?.to_string()))
+            Ok(Response::SimpleString(
+                res.await
+                    .map_err(|e| {
+                        TransientError::IOError {
+                            error: e
+                        }
+                    })?
+                    .to_string()
+            ))
         },
         b'-' => {
             let res = stream.read_until(b'\n', buf);
 
-            Ok(Response::Error(res.await.map_err(|e| TransientError::IOError { error: e })?.to_string()))
+            Ok(Response::Error(
+                res.await
+                    .map_err(|e| {
+                        TransientError::IOError {
+                            error: e
+                        }
+                    })?
+                    .to_string()
+            ))
         },
         b':' => {
             let res = parse_integer(stream);
@@ -95,8 +115,7 @@ async fn parse_server_response(
             let l = parse_integer_i64(stream).await?;
             if l == -1 {
                 Ok(Response::Null)
-            }
-            else {
+            } else {
                 let res = parse_bulk_string_pure(stream, l);
                 Ok(Response::BulkString(res.await?))
             }
@@ -111,7 +130,6 @@ async fn parse_server_response(
                 res_v.push(val.await?)
             }
 
-            
             Ok(Response::Array(res_v))
         },
         _ => Err(TransientError::ProtocolError)?

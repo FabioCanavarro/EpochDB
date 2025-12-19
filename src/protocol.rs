@@ -4,9 +4,8 @@ use std::str::from_utf8;
 use tokio::io::{
     AsyncBufReadExt,
     AsyncRead,
-    AsyncReadExt,
+    AsyncReadExt
 };
-
 use tracing::error;
 
 use crate::db::errors::TransientError;
@@ -15,22 +14,22 @@ use crate::server::CLIENT_COMMAND_SIZE;
 #[derive(Debug, PartialEq, Clone)]
 pub enum Response {
     /// (+OK, +PONG) - Usually status messages
-    SimpleString(String), 
+    SimpleString(String),
 
     /// (:1000) - For counters, TTLs
-    Integer(u64), 
+    Integer(u64),
 
     /// ($5\r\nvalue) - The actual binary-safe data
-    BulkString(Vec<u8>), 
+    BulkString(Vec<u8>),
 
     /// ($-1) - Key not found
-    Null, 
+    Null,
 
     /// (*2\r\n...) - Nested responses (Used for GET_METADATA)
-    Array(Vec<Response>), 
+    Array(Vec<Response>),
 
     /// (-ERR ...) - Protocol level errors
-    Error(String), 
+    Error(String)
 }
 
 /// A helper function to read a line terminated by '\n' and parse it as a u64
@@ -144,8 +143,8 @@ pub async fn parse_bulk_string<T: AsyncRead + AsyncReadExt + Unpin + AsyncBufRea
     Ok(data_buf)
 }
 
-/// Parses a single Bulk String from the stream an i64 len (e.g., "hello\r\n") to a
-/// Vec<u8>
+/// Parses a single Bulk String from the stream an i64 len (e.g., "hello\r\n")
+/// to a Vec<u8>
 pub async fn parse_bulk_string_pure<T: AsyncRead + AsyncReadExt + Unpin + AsyncBufReadExt>(
     stream: &mut T,
     len: i64
