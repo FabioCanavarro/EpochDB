@@ -1,4 +1,4 @@
-#![allow(unused_parens)]
+#![allow(unused_parens, unused_variables)]
 
 use std::io::Write;
 use std::str::from_utf8;
@@ -9,7 +9,7 @@ use clap::{
 };
 use epoch_db::db::errors::TransientError;
 use epoch_db::protocol::{
-    Response, parse_bulk_string, parse_bulk_string_pure, parse_integer, parse_integer_i64
+    Response, parse_bulk_string_pure, parse_integer, parse_integer_i64
 };
 use tokio::io::{
     AsyncBufReadExt,
@@ -68,8 +68,8 @@ struct Client {
 }
 
 async fn parse_server_response(
-    mut stream: BufStream<TcpStream>,
-    mut buf: Vec<u8>
+    stream: &mut BufStream<TcpStream>,
+    buf: &mut Vec<u8>
 ) -> Result<Response, TransientError> {
     let first = stream.read_u8().await.map_err(|e| {
         TransientError::IOError { error: e
@@ -79,31 +79,40 @@ async fn parse_server_response(
 
     match first {
         b'+' => {
-            let res = stream.read_until(b'\n', &mut buf);
+            let res = stream.read_until(b'\n', buf);
             Ok(Response::SimpleString(res.await.map_err(|e| TransientError::IOError { error: e })?.to_string()))
         },
         b'-' => {
-            let res = stream.read_until(b'\n', &mut buf);
+            let res = stream.read_until(b'\n', buf);
 
             Ok(Response::Error(res.await.map_err(|e| TransientError::IOError { error: e })?.to_string()))
         },
         b':' => {
-            let res = parse_integer(&mut stream);
+            let res = parse_integer(stream);
             Ok(Response::Integer(res.await?))
         },
         b'$' => {
-            let l = parse_integer_i64(&mut stream).await?;
+            let l = parse_integer_i64(stream).await?;
             if l == -1 {
                 Ok(Response::Null)
             }
             else {
-                let res = parse_bulk_string_pure(&mut stream, l);
+                let res = parse_bulk_string_pure(stream, l);
                 Ok(Response::BulkString(res.await?))
             }
         },
         b'*' => {
-            todo!()
+            let mut res_v: Vec<Response> = Vec::new();
 
+            let l = parse_integer(stream).await?;
+
+            for i in 0..l {
+                let val = parse_server_response(stream, buf);
+                res_v.push(val.await?)
+            }
+
+            
+            Ok(Response::Array(res_v))
         },
         _ => Err(TransientError::ProtocolError)?
     }
