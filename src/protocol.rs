@@ -17,7 +17,7 @@ pub enum Response {
     SimpleString(String),
 
     /// (:1000) - For counters, TTLs
-    Integer(u64),
+    Integer(i64),
 
     /// ($5\r\nvalue) - The actual binary-safe data
     BulkString(Vec<u8>),

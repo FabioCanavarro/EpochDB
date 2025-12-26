@@ -11,7 +11,6 @@ use clap::{
 use epoch_db::db::errors::TransientError;
 use epoch_db::protocol::{
     parse_bulk_string_pure,
-    parse_integer,
     parse_integer_i64,
     Response
 };
@@ -72,8 +71,8 @@ struct Client {
 }
 
 #[async_recursion]
-async fn parse_server_response(
-    stream: &mut BufStream<TcpStream>,
+async fn parse_server_response<T: AsyncReadExt + Unpin + AsyncBufReadExt + Send>(
+    stream: &mut T,
     buf: &mut Vec<u8>
 ) -> Result<Response, TransientError> {
     let first = stream.read_u8().await.map_err(|e| {
@@ -108,7 +107,7 @@ async fn parse_server_response(
             ))
         },
         b':' => {
-            let res = parse_integer(stream);
+            let res = parse_integer_i64(stream);
             Ok(Response::Integer(res.await?))
         },
         b'$' => {
@@ -123,7 +122,7 @@ async fn parse_server_response(
         b'*' => {
             let mut res_v: Vec<Response> = Vec::new();
 
-            let l = parse_integer(stream).await?;
+            let l = parse_integer_i64(stream).await?;
 
             for i in 0..l {
                 let val = parse_server_response(stream, buf);
@@ -228,20 +227,10 @@ async fn tcp_logic(cli: Cli, mut client: Client) -> Result<String, TransientErro
                     error: e
                 }
             })?;
-
             // Clearing the buffer, to be able to allocate the data
             client.buf.clear();
 
-            // Read from the stream
-            //TODO: Dont use '\n' try to ehh use other tricks
-            buf_stream
-                .read_until(b'\n', &mut client.buf)
-                .await
-                .map_err(|e| {
-                    TransientError::IOError {
-                        error: e
-                    }
-                })?;
+            parse_server_response(&mut buf_stream, &mut client.buf).await?;
 
             // Convert the response into a string
             let res = from_utf8(&client.buf).map_err(|_| TransientError::ParsingToUTF8Error)?;
