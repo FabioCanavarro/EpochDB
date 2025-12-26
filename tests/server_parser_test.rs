@@ -2,7 +2,10 @@ use std::io::Cursor;
 use std::time::Duration;
 
 use epoch_db::db::errors::TransientError;
-use epoch_db::protocol::{parse_bulk_string_pure, parse_integer_i64};
+use epoch_db::protocol::{
+    parse_bulk_string_pure,
+    parse_integer_i64
+};
 use epoch_db::server::commands::{
     Command,
     ParsedResponse
