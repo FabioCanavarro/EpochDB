@@ -2,7 +2,7 @@ use std::io::Cursor;
 use std::time::Duration;
 
 use epoch_db::db::errors::TransientError;
-use epoch_db::protocol::parse_integer_i64;
+use epoch_db::protocol::{parse_bulk_string_pure, parse_integer_i64};
 use epoch_db::server::commands::{
     Command,
     ParsedResponse
@@ -255,4 +255,14 @@ async fn test_parse_integer_i64() {
     let r = parse_integer_i64(&mut buf_reader);
 
     assert_eq!(r.await.unwrap(), 2);
+}
+
+#[tokio::test]
+async fn test_parse_bulk_string_pure() {
+    let input = b"GET\r\n";
+    let c = Cursor::new(input);
+    let mut buf_reader = BufReader::new(c);
+    let r = parse_bulk_string_pure(&mut buf_reader, 3);
+
+    assert_eq!(r.await.unwrap(), b"GET");
 }
