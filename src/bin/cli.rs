@@ -1,4 +1,5 @@
 #![allow(unused_parens, unused_variables)]
+#![allow(clippy::multiple_bound_locations)]
 
 use std::io::Write;
 use std::str::from_utf8;
