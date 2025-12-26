@@ -3,6 +3,7 @@
 use std::io::Write;
 use std::str::from_utf8;
 
+use async_recursion::async_recursion;
 use clap::{
     Parser,
     Subcommand
@@ -70,6 +71,7 @@ struct Client {
     buf: Vec<u8>
 }
 
+#[async_recursion]
 async fn parse_server_response(
     stream: &mut BufStream<TcpStream>,
     buf: &mut Vec<u8>
@@ -124,7 +126,7 @@ async fn parse_server_response(
             let l = parse_integer(stream).await?;
 
             for i in 0..l {
-                let val = Box::pin(parse_server_response(stream, buf));
+                let val = parse_server_response(stream, buf);
                 res_v.push(val.await?)
             }
 
