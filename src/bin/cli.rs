@@ -298,16 +298,23 @@ async fn tcp_logic(cli: Cli, mut client: Client) -> Result<String, TransientErro
 
             Ok(String::from(res))
         },
-        Commands::Get { key } | Commands::IncrementFrequency { key } => {
+        Commands::Get {
+            key
+        }
+        | Commands::IncrementFrequency {
+            key
+        } => {
             // Initiate a the key and value as ref, so i do not need to keep calling
             // .as_ref()
             let k: &[u8] = key.as_ref();
 
             // Clear the buffer, to use the buffer
             client.buf.clear();
-            
+
             match c {
-                Commands::Get { key } => {
+                Commands::Get {
+                    key
+                } => {
                     // Write the initial header, the number of elements and the command
                     write!(client.buf, "*{}\r\n$3\r\nGET\r\n", 2).map_err(|e| {
                         TransientError::IOError {
@@ -315,15 +322,18 @@ async fn tcp_logic(cli: Cli, mut client: Client) -> Result<String, TransientErro
                         }
                     })?;
                 },
-                Commands::IncrementFrequency { key } => {
+                Commands::IncrementFrequency {
+                    key
+                } => {
                     // Write the initial header, the number of elements and the command
-                    write!(client.buf, "*{}\r\n$19\r\nINCREMENT_FREQUENCY\r\n", 2).map_err(|e| {
-                        TransientError::IOError {
-                            error: e
+                    write!(client.buf, "*{}\r\n$19\r\nINCREMENT_FREQUENCY\r\n", 2).map_err(
+                        |e| {
+                            TransientError::IOError {
+                                error: e
+                            }
                         }
-                    })?;
-
-                }
+                    )?;
+                },
                 _ => Err(TransientError::ProtocolError)?
             }
 
@@ -372,7 +382,6 @@ async fn tcp_logic(cli: Cli, mut client: Client) -> Result<String, TransientErro
             todo!()
         },
         Commands::Size => {
-
             // Clear the buffer, to use the buffer
             client.buf.clear();
 
