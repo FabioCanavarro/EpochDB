@@ -230,7 +230,7 @@ async fn tcp_logic(cli: Cli, mut client: Client) -> Result<String, TransientErro
             client.buf.clear();
 
             // Write the initial header, the number of elements and the command
-            write!(client.buf, "*{}\r\n$2\r\nRM\r\n", 2).map_err(|e| {
+            write!(client.buf, "*2\r\n$2\r\nRM\r\n").map_err(|e| {
                 TransientError::IOError {
                     error: e
                 }
@@ -263,7 +263,7 @@ async fn tcp_logic(cli: Cli, mut client: Client) -> Result<String, TransientErro
             client.buf.clear();
 
             // Write the initial header, the number of elements and the command
-            write!(client.buf, "*{}\r\n$3\r\nGET\r\n", 2).map_err(|e| {
+            write!(client.buf, "*2\r\n$3\r\nGET\r\n").map_err(|e| {
                 TransientError::IOError {
                     error: e
                 }
@@ -283,8 +283,6 @@ async fn tcp_logic(cli: Cli, mut client: Client) -> Result<String, TransientErro
                     error: e
                 }
             })?;
-
-
         },
         Commands::IncrementFrequency {
             key
@@ -297,7 +295,7 @@ async fn tcp_logic(cli: Cli, mut client: Client) -> Result<String, TransientErro
             client.buf.clear();
 
             // Write the initial header, the number of elements and the command
-            write!(client.buf, "*{}\r\n$19\r\nINCREMENT_FREQUENCY\r\n", 2).map_err(
+            write!(client.buf, "*2\r\n$19\r\nINCREMENT_FREQUENCY\r\n").map_err(
                 |e| {
                     TransientError::IOError {
                         error: e
@@ -319,7 +317,6 @@ async fn tcp_logic(cli: Cli, mut client: Client) -> Result<String, TransientErro
                     error: e
                 }
             })?;
-
         },
         Commands::GetMetadata {
             key
@@ -331,18 +328,33 @@ async fn tcp_logic(cli: Cli, mut client: Client) -> Result<String, TransientErro
             client.buf.clear();
 
             // Write the initial header, the number of elements and the command
-            write!(client.buf, "*{}\r\n$4\r\nSIZE\r\n", 2).map_err(|e| {
+            write!(client.buf, "*1\r\n$4\r\nSIZE\r\n").map_err(|e| {
                 TransientError::IOError {
                     error: e
                 }
             })?;
-
         },
         Commands::Flush => {
-            todo!()
+            // Clear the buffer, to use the buffer
+            client.buf.clear();
+
+            // Write the initial header, the number of elements and the command
+            write!(client.buf, "*1\r\n$5\r\nFLUSH\r\n").map_err(|e| {
+                TransientError::IOError {
+                    error: e
+                }
+            })?;
         },
         Commands::Ping => {
-            todo!()
+            // Clear the buffer, to use the buffer
+            client.buf.clear();
+
+            // Write the initial header, the number of elements and the command
+            write!(client.buf, "*1\r\n$4\r\nPING\r\n").map_err(|e| {
+                TransientError::IOError {
+                    error: e
+                }
+            })?;
         }
     }
 
