@@ -140,7 +140,7 @@ async fn parse_server_response<T: AsyncReadExt + Unpin + AsyncBufReadExt + Send>
     }
 }
 
-async fn tcp_logic(cli: Cli, mut client: Client) -> Result<String, TransientError> {
+async fn tcp_logic(cli: Cli, mut client: Client) -> Result<Response, TransientError> {
     let c = cli.command.unwrap();
     let mut buf_stream = BufStream::new(client.stream);
     match c {
@@ -321,7 +321,7 @@ async fn tcp_logic(cli: Cli, mut client: Client) -> Result<String, TransientErro
         Commands::GetMetadata {
             key
         } => {
-            todo!()
+            todo!();
         },
         Commands::Size => {
             // Clear the buffer, to use the buffer
@@ -377,12 +377,9 @@ async fn tcp_logic(cli: Cli, mut client: Client) -> Result<String, TransientErro
     // Clearing the buffer, to be able to allocate the data
     client.buf.clear();
 
-    parse_server_response(&mut buf_stream, &mut client.buf).await?;
+    let res = parse_server_response(&mut buf_stream, &mut client.buf).await?;
 
-    // Convert the response into a string
-    let res = from_utf8(&client.buf).map_err(|_| TransientError::ParsingToUTF8Error)?;
-
-    Ok(String::from(res))
+    Ok(res)
 }
 
 #[tokio::main]
