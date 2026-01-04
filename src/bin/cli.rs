@@ -218,29 +218,6 @@ async fn tcp_logic(cli: Cli, mut client: Client) -> Result<String, TransientErro
                     }
                 })?;
             }
-
-            // Write the buffer into the stream
-            buf_stream.write_all(&client.buf).await.map_err(|e| {
-                TransientError::IOError {
-                    error: e
-                }
-            })?;
-
-            // Flush the stream to make sure that, data fully gets through the stream
-            buf_stream.flush().await.map_err(|e| {
-                TransientError::IOError {
-                    error: e
-                }
-            })?;
-            // Clearing the buffer, to be able to allocate the data
-            client.buf.clear();
-
-            parse_server_response(&mut buf_stream, &mut client.buf).await?;
-
-            // Convert the response into a string
-            let res = from_utf8(&client.buf).map_err(|_| TransientError::ParsingToUTF8Error)?;
-
-            Ok(String::from(res))
         },
         Commands::Rm {
             key
@@ -274,34 +251,8 @@ async fn tcp_logic(cli: Cli, mut client: Client) -> Result<String, TransientErro
                 }
             })?;
 
-            // Write the buffer into the stream
-            buf_stream.write_all(&client.buf).await.map_err(|e| {
-                TransientError::IOError {
-                    error: e
-                }
-            })?;
-
-            // Flush the stream to make sure that, data fully gets through the stream
-            buf_stream.flush().await.map_err(|e| {
-                TransientError::IOError {
-                    error: e
-                }
-            })?;
-
-            // Clearing the buffer, to be able to allocate the data
-            client.buf.clear();
-
-            parse_server_response(&mut buf_stream, &mut client.buf).await?;
-
-            // Convert the response into a string
-            let res = from_utf8(&client.buf).map_err(|_| TransientError::ParsingToUTF8Error)?;
-
-            Ok(String::from(res))
         },
         Commands::Get {
-            key
-        }
-        | Commands::IncrementFrequency {
             key
         } => {
             // Initiate a the key and value as ref, so i do not need to keep calling
@@ -311,31 +262,12 @@ async fn tcp_logic(cli: Cli, mut client: Client) -> Result<String, TransientErro
             // Clear the buffer, to use the buffer
             client.buf.clear();
 
-            match c {
-                Commands::Get {
-                    key
-                } => {
-                    // Write the initial header, the number of elements and the command
-                    write!(client.buf, "*{}\r\n$3\r\nGET\r\n", 2).map_err(|e| {
-                        TransientError::IOError {
-                            error: e
-                        }
-                    })?;
-                },
-                Commands::IncrementFrequency {
-                    key
-                } => {
-                    // Write the initial header, the number of elements and the command
-                    write!(client.buf, "*{}\r\n$19\r\nINCREMENT_FREQUENCY\r\n", 2).map_err(
-                        |e| {
-                            TransientError::IOError {
-                                error: e
-                            }
-                        }
-                    )?;
-                },
-                _ => Err(TransientError::ProtocolError)?
-            }
+            // Write the initial header, the number of elements and the command
+            write!(client.buf, "*{}\r\n$3\r\nGET\r\n", 2).map_err(|e| {
+                TransientError::IOError {
+                    error: e
+                }
+            })?;
 
             // Writing the length of the next element
             write!(client.buf, "${}\r\n", k.len()).map_err(|e| {
@@ -352,29 +284,42 @@ async fn tcp_logic(cli: Cli, mut client: Client) -> Result<String, TransientErro
                 }
             })?;
 
-            // Write the buffer into the stream
-            buf_stream.write_all(&client.buf).await.map_err(|e| {
-                TransientError::IOError {
-                    error: e
-                }
-            })?;
 
-            // Flush the stream to make sure that, data fully gets through the stream
-            buf_stream.flush().await.map_err(|e| {
-                TransientError::IOError {
-                    error: e
-                }
-            })?;
+        },
+        Commands::IncrementFrequency {
+            key
+        } => {
+            // Initiate a the key and value as ref, so i do not need to keep calling
+            // .as_ref()
+            let k: &[u8] = key.as_ref();
 
-            // Clearing the buffer, to be able to allocate the data
+            // Clear the buffer, to use the buffer
             client.buf.clear();
 
-            parse_server_response(&mut buf_stream, &mut client.buf).await?;
+            // Write the initial header, the number of elements and the command
+            write!(client.buf, "*{}\r\n$19\r\nINCREMENT_FREQUENCY\r\n", 2).map_err(
+                |e| {
+                    TransientError::IOError {
+                        error: e
+                    }
+                }
+            )?;
 
-            // Convert the response into a string
-            let res = from_utf8(&client.buf).map_err(|_| TransientError::ParsingToUTF8Error)?;
+            // Writing the length of the next element
+            write!(client.buf, "${}\r\n", k.len()).map_err(|e| {
+                TransientError::IOError {
+                    error: e
+                }
+            })?;
 
-            Ok(String::from(res))
+            // Extending the client.buf instead of using write! to ensure binary safety
+            client.buf.extend_from_slice(k);
+            write!(client.buf, "\r\n").map_err(|e| {
+                TransientError::IOError {
+                    error: e
+                }
+            })?;
+
         },
         Commands::GetMetadata {
             key
@@ -392,29 +337,6 @@ async fn tcp_logic(cli: Cli, mut client: Client) -> Result<String, TransientErro
                 }
             })?;
 
-            // Write the buffer into the stream
-            buf_stream.write_all(&client.buf).await.map_err(|e| {
-                TransientError::IOError {
-                    error: e
-                }
-            })?;
-
-            // Flush the stream to make sure that, data fully gets through the stream
-            buf_stream.flush().await.map_err(|e| {
-                TransientError::IOError {
-                    error: e
-                }
-            })?;
-
-            // Clearing the buffer, to be able to allocate the data
-            client.buf.clear();
-
-            parse_server_response(&mut buf_stream, &mut client.buf).await?;
-
-            // Convert the response into a string
-            let res = from_utf8(&client.buf).map_err(|_| TransientError::ParsingToUTF8Error)?;
-
-            Ok(String::from(res))
         },
         Commands::Flush => {
             todo!()
@@ -423,6 +345,32 @@ async fn tcp_logic(cli: Cli, mut client: Client) -> Result<String, TransientErro
             todo!()
         }
     }
+
+    // NOTE: Writing, flushing and reading response
+
+    // Write the buffer into the stream
+    buf_stream.write_all(&client.buf).await.map_err(|e| {
+        TransientError::IOError {
+            error: e
+        }
+    })?;
+
+    // Flush the stream to make sure that, data fully gets through the stream
+    buf_stream.flush().await.map_err(|e| {
+        TransientError::IOError {
+            error: e
+        }
+    })?;
+
+    // Clearing the buffer, to be able to allocate the data
+    client.buf.clear();
+
+    parse_server_response(&mut buf_stream, &mut client.buf).await?;
+
+    // Convert the response into a string
+    let res = from_utf8(&client.buf).map_err(|_| TransientError::ParsingToUTF8Error)?;
+
+    Ok(String::from(res))
 }
 
 #[tokio::main]
