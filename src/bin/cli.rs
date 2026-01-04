@@ -420,8 +420,10 @@ async fn main() {
         return;
     }
 
+    // WARN: Single connection only, wastes a lot, we can have a repl later?
+    //
     // Bind to the address
-    let stream = match TcpStream::connect(&cli.addr).await {
+    let res = match TcpStream::connect(&cli.addr).await {
         Ok(stream) => {
             let client = Client {
                 stream,
@@ -438,13 +440,22 @@ async fn main() {
         },
     };
 
-    // Matches the error from stream
-    match stream {
-        Ok(_) => {
-            todo!()
+    // TODO: Gotta test using the simplest thing first so, a print!("{:#?}",res) type shi
+    // Matches the error from the response
+    match res {
+        Ok(r) => {
+            println!("{:#?}", r)
         },
-        Err(_) => {
-            todo!()
+        Err(e) => {
+            println!("I am probably dumb as fuck, error: {:#?}", e)
         }
     }
 }
+
+
+
+
+
+
+
+
