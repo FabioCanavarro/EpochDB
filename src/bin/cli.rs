@@ -76,7 +76,6 @@ async fn parse_server_response<T: AsyncReadExt + Unpin + AsyncBufReadExt + Send>
     stream: &mut T,
     buf: &mut Vec<u8>
 ) -> Result<Response, TransientError> {
-
     let first = stream.read_u8().await.map_err(|e| {
         TransientError::IOError {
             error: e
@@ -251,7 +250,6 @@ async fn tcp_logic(cli: Cli, mut client: Client) -> Result<Response, TransientEr
                     error: e
                 }
             })?;
-
         },
         Commands::Get {
             key
@@ -296,13 +294,11 @@ async fn tcp_logic(cli: Cli, mut client: Client) -> Result<Response, TransientEr
             client.buf.clear();
 
             // Write the initial header, the number of elements and the command
-            write!(client.buf, "*2\r\n$19\r\nINCREMENT_FREQUENCY\r\n").map_err(
-                |e| {
-                    TransientError::IOError {
-                        error: e
-                    }
+            write!(client.buf, "*2\r\n$19\r\nINCREMENT_FREQUENCY\r\n").map_err(|e| {
+                TransientError::IOError {
+                    error: e
                 }
-            )?;
+            })?;
 
             // Writing the length of the next element
             write!(client.buf, "${}\r\n", k.len()).map_err(|e| {
@@ -350,7 +346,6 @@ async fn tcp_logic(cli: Cli, mut client: Client) -> Result<Response, TransientEr
                     error: e
                 }
             })?;
-
         },
         Commands::Size => {
             // Clear the buffer, to use the buffer
@@ -422,7 +417,6 @@ async fn main() {
         return;
     }
 
-
     // WARN: Single connection only, wastes a lot, we can have a repl later?
     //
     // Bind to the address
@@ -443,8 +437,8 @@ async fn main() {
         },
     };
 
-    // TODO: Gotta test using the simplest thing first so, a print!("{:#?}",res) type shi
-    // Matches the error from the response
+    // TODO: Gotta test using the simplest thing first so, a print!("{:#?}",res)
+    // type shi Matches the error from the response
     match res {
         Ok(r) => {
             println!("{:#?}", r)
@@ -454,11 +448,3 @@ async fn main() {
         }
     }
 }
-
-
-
-
-
-
-
-

@@ -16,7 +16,10 @@ use tokio::io::{
 };
 use tokio::net::TcpStream;
 use tracing::{
-    debug, error, info, warn
+    debug,
+    error,
+    info,
+    warn
 };
 
 use crate::db::errors::TransientError;
@@ -48,8 +51,8 @@ pub async fn response_handler(mut stream: TcpStream, store: Arc<DB>) -> Result<(
                 info!("{:?} Command is received", cmd.command);
                 match execute_commands(cmd, &store, &mut bufwriter).await {
                     Ok(_) => {
-                    info!("Command is executed succesfully!")
-                },
+                        info!("Command is executed succesfully!")
+                    },
                     Err(e) => {
                         match e {
                             TransientError::InvalidCommand => {
@@ -129,10 +132,14 @@ pub async fn response_handler(mut stream: TcpStream, store: Arc<DB>) -> Result<(
             },
         }
 
-        bufwriter.flush().await.map_err(|e| TransientError::IOError { error: e })?;
+        bufwriter.flush().await.map_err(|e| {
+            TransientError::IOError {
+                error: e
+            }
+        })?;
         info!("Stream is flushed!!");
     }
-    
+
     Ok(())
 }
 
