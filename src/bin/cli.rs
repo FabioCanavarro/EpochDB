@@ -321,7 +321,35 @@ async fn tcp_logic(cli: Cli, mut client: Client) -> Result<Response, TransientEr
         Commands::GetMetadata {
             key
         } => {
-            todo!();
+            // Initiate a the key and value as ref, so i do not need to keep calling
+            // .as_ref()
+            let k: &[u8] = key.as_ref();
+
+            // Clear the buffer, to use the buffer
+            client.buf.clear();
+
+            // Write the initial header, the number of elements and the command
+            write!(client.buf, "*2\r\n$12\r\nGET_METADATA\r\n").map_err(|e| {
+                TransientError::IOError {
+                    error: e
+                }
+            })?;
+
+            // Writing the length of the next element
+            write!(client.buf, "${}\r\n", k.len()).map_err(|e| {
+                TransientError::IOError {
+                    error: e
+                }
+            })?;
+
+            // Extending the client.buf instead of using write! to ensure binary safety
+            client.buf.extend_from_slice(k);
+            write!(client.buf, "\r\n").map_err(|e| {
+                TransientError::IOError {
+                    error: e
+                }
+            })?;
+
         },
         Commands::Size => {
             // Clear the buffer, to use the buffer
