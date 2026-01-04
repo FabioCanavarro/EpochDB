@@ -16,7 +16,7 @@ use tokio::io::{
 };
 use tokio::net::TcpStream;
 use tracing::{
-    error, info, warn
+    debug, error, info, warn
 };
 
 use crate::db::errors::TransientError;
@@ -41,7 +41,7 @@ pub async fn response_handler(mut stream: TcpStream, store: Arc<DB>) -> Result<(
 
     loop {
         let cmd_err = parse_command(&mut bufreader).await;
-        info!("Received: {:#?}", cmd_err);
+        debug!("Received: {:#?}", cmd_err);
 
         match cmd_err {
             Ok(cmd) => {

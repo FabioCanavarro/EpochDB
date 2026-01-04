@@ -76,7 +76,6 @@ async fn parse_server_response<T: AsyncReadExt + Unpin + AsyncBufReadExt + Send>
     stream: &mut T,
     buf: &mut Vec<u8>
 ) -> Result<Response, TransientError> {
-    println!("read_u8");
 
     let first = stream.read_u8().await.map_err(|e| {
         TransientError::IOError {
@@ -85,7 +84,6 @@ async fn parse_server_response<T: AsyncReadExt + Unpin + AsyncBufReadExt + Send>
     })?;
     buf.clear();
 
-    println!("matching");
     match first {
         b'+' => {
             let res = stream.read_until(b'\n', buf).await.map_err(|e| {
@@ -409,9 +407,7 @@ async fn tcp_logic(cli: Cli, mut client: Client) -> Result<Response, TransientEr
     // Clearing the buffer, to be able to allocate the data
     client.buf.clear();
 
-    println!("flushing");
     let res = parse_server_response(&mut buf_stream, &mut client.buf).await?;
-    println!("suceed");
 
     Ok(res)
 }
