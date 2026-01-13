@@ -441,6 +441,30 @@ async fn main() {
     // type shi Matches the error from the response
     match res {
         Ok(r) => {
+            match r.clone() {
+                Response::SimpleString(rs) => {
+                    if rs == "OK" {
+                        println!("The Command is executed succesfully")
+                    }
+                    
+                },
+                Response::Integer(i) => {
+                    todo!()
+                },
+                Response::Array(a) => {
+                    todo!()
+                },
+                Response::BulkString(bs) => {
+                    // Bullshit
+                    todo!()
+                },
+                Response::Error(e) => {
+                    todo!()
+                },
+                Response::Null => {
+                    todo!()
+                }
+            }
             println!("{:#?}", r)
         },
         Err(e) => {
