@@ -23,6 +23,8 @@ use tokio::io::{
 };
 use tokio::net::TcpStream;
 
+use colored::Colorize;
+
 // Cli Parser
 #[derive(Parser)]
 #[command(version, about)]
@@ -437,35 +439,40 @@ async fn main() {
         },
     };
 
-    // TODO: Gotta test using the simplest thing first so, a print!("{:#?}",res)
-    // type shi Matches the error from the response
     match res {
         Ok(r) => {
-            match r.clone() {
+            match r {
                 Response::SimpleString(rs) => {
-                    if rs == "OK" {
-                        println!("The Command is executed succesfully")
-                    }
-                    
+                    println!("{}", rs.green())   
                 },
                 Response::Integer(i) => {
-                    todo!()
+                    println!("{}", i)
                 },
+                // MAKE THIS RECURSIVE YAYYYY
                 Response::Array(a) => {
-                    todo!()
+                    let mut c = 1;
+                    for i in a {
+                        println!("{}) {:?}", c, i);
+                        c+=1
+                    }
                 },
                 Response::BulkString(bs) => {
-                    // Bullshit
-                    todo!()
+                    //TODO: Bullshit
+                    let s = from_utf8(&bs);
+                    match s {
+                        Ok(ss)  => println!("{}", ss),
+                        Err(e) => {
+                            println!("{:?}", e) // IDK WHAT THE FUCK I SHOULD DO LMAO
+                        }
+                    }
                 },
                 Response::Error(e) => {
-                    todo!()
+                    println!("{} {}", "ERROR: ".red(), e.red())
                 },
                 Response::Null => {
-                    todo!()
+                    println!("nil")
                 }
             }
-            println!("{:#?}", r)
         },
         Err(e) => {
             println!("I am probably dumb as fuck, error: {:#?}", e)
