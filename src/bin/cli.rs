@@ -9,6 +9,7 @@ use clap::{
     Parser,
     Subcommand
 };
+use colored::Colorize;
 use epoch_db::db::errors::TransientError;
 use epoch_db::protocol::{
     parse_bulk_string_pure,
@@ -22,8 +23,6 @@ use tokio::io::{
     BufStream
 };
 use tokio::net::TcpStream;
-
-use colored::Colorize;
 
 // Cli Parser
 #[derive(Parser)]
@@ -443,7 +442,7 @@ async fn main() {
         Ok(r) => {
             match r {
                 Response::SimpleString(rs) => {
-                    println!("{}", rs.green())   
+                    println!("{}", rs.green())
                 },
                 Response::Integer(i) => {
                     println!("{}", i)
@@ -453,16 +452,17 @@ async fn main() {
                     let mut c = 1;
                     for i in a {
                         println!("{}) {:?}", c, i);
-                        c+=1
+                        c += 1
                     }
                 },
                 Response::BulkString(bs) => {
                     //TODO: Bullshit
                     let s = from_utf8(&bs);
                     match s {
-                        Ok(ss)  => println!("{}", ss),
+                        Ok(ss) => println!("{}", ss),
                         Err(e) => {
-                            println!("{:?}", e) // IDK WHAT THE FUCK I SHOULD DO LMAO
+                            println!("{:?}", e) // IDK WHAT THE FUCK I SHOULD DO
+                                                // LMAO
                         }
                     }
                 },
