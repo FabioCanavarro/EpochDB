@@ -73,6 +73,50 @@ struct Client {
 }
 
 #[async_recursion]
+async fn handle_response(res: Result<Response, TransientError>) -> Result<(), TransientError> {
+    match res {
+        Ok(r) => {
+            match r {
+                Response::SimpleString(rs) => {
+                    println!("{}", rs.green())
+                },
+                Response::Integer(i) => {
+                    println!("{}", i)
+                },
+                // MAKE THIS RECURSIVE YAYYYY
+                Response::Array(a) => {
+                    let mut c = 1;
+                    for i in a {
+                        handle_response(Ok(i)).await?;
+                        c += 1
+                    }
+                },
+                Response::BulkString(bs) => {
+                    let s = from_utf8(&bs);
+                    match s {
+                        Ok(ss) => println!("{}", ss),
+                        Err(e) => {
+                            println!("{:?}", e) // IDK WHAT THE FUCK I SHOULD DO
+                                                // LMAO
+                        }
+                    }
+                },
+                Response::Error(e) => {
+                    println!("{} {}", "ERROR: ".red(), e.red())
+                },
+                Response::Null => {
+                    println!("nil")
+                }
+            }
+        },
+        Err(e) => {
+            println!("I am probably dumb as fuck, error: {:#?}", e)
+        }
+    }
+    Ok(())
+}
+
+#[async_recursion]
 async fn parse_server_response<T: AsyncReadExt + Unpin + AsyncBufReadExt + Send>(
     stream: &mut T,
     buf: &mut Vec<u8>
@@ -438,44 +482,7 @@ async fn main() {
         },
     };
 
-    match res {
-        Ok(r) => {
-            match r {
-                Response::SimpleString(rs) => {
-                    println!("{}", rs.green())
-                },
-                Response::Integer(i) => {
-                    println!("{}", i)
-                },
-                // MAKE THIS RECURSIVE YAYYYY
-                Response::Array(a) => {
-                    let mut c = 1;
-                    for i in a {
-                        println!("{}) {:?}", c, i);
-                        c += 1
-                    }
-                },
-                Response::BulkString(bs) => {
-                    //TODO: Bullshit
-                    let s = from_utf8(&bs);
-                    match s {
-                        Ok(ss) => println!("{}", ss),
-                        Err(e) => {
-                            println!("{:?}", e) // IDK WHAT THE FUCK I SHOULD DO
-                                                // LMAO
-                        }
-                    }
-                },
-                Response::Error(e) => {
-                    println!("{} {}", "ERROR: ".red(), e.red())
-                },
-                Response::Null => {
-                    println!("nil")
-                }
-            }
-        },
-        Err(e) => {
-            println!("I am probably dumb as fuck, error: {:#?}", e)
-        }
+    if let Err(e) = handle_response(res).await {
+        println!("Error: {}", e)
     }
 }
