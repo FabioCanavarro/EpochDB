@@ -16,6 +16,7 @@ use tokio::io::{
 };
 use tokio::net::TcpStream;
 use tracing::{
+    debug,
     error,
     info,
     warn
@@ -24,15 +25,15 @@ use tracing::{
 use crate::DB;
 use crate::db::errors::TransientError;
 use crate::metadata::RespValue;
+use crate::protocol::{
+    parse_bulk_string,
+    parse_integer
+};
 use crate::server::commands::{
     Command,
     ParsedResponse
 };
-use crate::server::utils::{
-    check_argument,
-    parse_bulk_string,
-    parse_integer
-};
+use crate::server::utils::check_argument;
 
 pub static CLIENT_COMMAND_SIZE: u64 = 4096;
 
@@ -43,10 +44,15 @@ pub async fn response_handler(mut stream: TcpStream, store: Arc<DB>) -> Result<(
 
     loop {
         let cmd_err = parse_command(&mut bufreader).await;
+        debug!("Received: {:#?}", cmd_err);
+
         match cmd_err {
             Ok(cmd) => {
+                info!("{:?} Command is received", cmd.command);
                 match execute_commands(cmd, &store, &mut bufwriter).await {
-                    Ok(_) => (),
+                    Ok(_) => {
+                        info!("Command is executed successfully!")
+                    },
                     Err(e) => {
                         match e {
                             TransientError::InvalidCommand => {
@@ -125,7 +131,15 @@ pub async fn response_handler(mut stream: TcpStream, store: Arc<DB>) -> Result<(
                 }
             },
         }
+
+        bufwriter.flush().await.map_err(|e| {
+            TransientError::IOError {
+                error: e
+            }
+        })?;
+        info!("Stream is flushed!!");
     }
+
     Ok(())
 }
 

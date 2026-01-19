@@ -56,7 +56,8 @@ pub enum TransientError {
         command: String,
         expected: u32,
         received: u32
-    }
+    },
+    ProtocolError
 }
 
 impl Display for TransientError {
@@ -102,6 +103,12 @@ impl Display for TransientError {
                 writeln!(
                     f,
                     "Wrong number of arguments for \"{command}\" command; Needed {expected} arguments, Received {received} arguments"
+                )
+            },
+            TransientError::ProtocolError => {
+                writeln!(
+                    f,
+                    "Invalid RESP protocol format: unexpected or malformed data received"
                 )
             }
         }

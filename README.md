@@ -43,7 +43,7 @@ Get started with `EpochDB` by adding it to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-epoch-db = "0.2.8"
+epoch-db = "0.3.0"
 ````
 
 ### Basic Usage
@@ -95,7 +95,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   * **V3 (The Ecosystem)**
 
-      * [ ] Optional networked server (gRPC or custom TCP protocol).
+      * [x] Optional networked server (gRPC or custom TCP protocol).
       * [ ] A simple CLI tool for database inspection and management.
       * [ ] A TUI or web-based dashboard for viewing stats.
 

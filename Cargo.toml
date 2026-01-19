@@ -7,7 +7,7 @@ homepage = "https://github.com/FabioCanavarro/EpochDB"
 readme = "README.md"
 keywords = ["database", "kv-store", "sled", "cache", "ttl"]
 categories = ["database-implementations", "caching", "concurrency", "data-structures"]
-version = "0.2.8"
+version = "0.3.0"
 edition = "2024"
 
 [[bin]]
@@ -21,9 +21,12 @@ path = "./src/bin/server.rs"
 [lib]
 
 [dependencies]
+async-recursion = "1.1.1"
 axum = "0.8.4"
 bincode = { version = "2.0.1", features = ["serde", "derive"] }
 chrono = "0.4.41"
+clap = { version = "4.5.53", features = ["derive"] }
+colored = "3.0.0"
 futures = "0.3.31"
 metrics = "0.24.2"
 metrics-exporter-prometheus = "0.17.2"
