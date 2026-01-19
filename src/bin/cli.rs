@@ -87,6 +87,7 @@ async fn handle_response(res: Result<Response, TransientError>) -> Result<(), Tr
                 Response::Array(a) => {
                     let mut c = 1;
                     for i in a {
+                        print!("{c}) ");
                         handle_response(Ok(i)).await?;
                         c += 1
                     }
