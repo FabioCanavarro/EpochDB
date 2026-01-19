@@ -106,7 +106,10 @@ impl Display for TransientError {
                 )
             },
             TransientError::ProtocolError => {
-                writeln!(f, "Invalid RESP protocol format: unexpected or malformed data received")
+                writeln!(
+                    f,
+                    "Invalid RESP protocol format: unexpected or malformed data received"
+                )
             }
         }
     }
