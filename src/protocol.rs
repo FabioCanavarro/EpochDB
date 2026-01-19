@@ -33,7 +33,7 @@ pub enum Response {
 }
 
 /// A helper function to read a line terminated by '\n' and parse it as a u64
-pub async fn parse_integer<T: AsyncReadExt + AsyncRead + Unpin + AsyncBufReadExt>(
+pub async fn parse_integer<T: AsyncReadExt + Unpin + AsyncBufReadExt>(
     stream: &mut T
 ) -> Result<u64, TransientError> {
     let mut buffer = Vec::new();
