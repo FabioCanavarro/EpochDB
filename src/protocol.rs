@@ -139,7 +139,7 @@ pub async fn parse_bulk_string<T: AsyncRead + AsyncReadExt + Unpin + AsyncBufRea
         return Err(TransientError::InvalidCommand);
     }
 
-    // Convert the data bytes to a String
+    // Return the data bytes as Vec<u8>
     Ok(data_buf)
 }
 
