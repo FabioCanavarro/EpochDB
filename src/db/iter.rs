@@ -3,8 +3,8 @@ use std::str::from_utf8;
 use std::sync::Arc;
 
 use crate::{
-    Metadata,
-    DB
+    DB,
+    Metadata
 };
 
 /// This is an iterator struct that represents the Database main iterator

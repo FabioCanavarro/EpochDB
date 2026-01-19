@@ -16,8 +16,8 @@ use sled::transaction::{
 use crate::db::errors::TransientError;
 use crate::db::transaction::metric_handler::GuardMetricChanged;
 use crate::{
-    Metadata,
-    DB
+    DB,
+    Metadata
 };
 
 pub mod metric_handler;

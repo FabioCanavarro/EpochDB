@@ -12,9 +12,9 @@ use clap::{
 use colored::Colorize;
 use epoch_db::db::errors::TransientError;
 use epoch_db::protocol::{
+    Response,
     parse_bulk_string_pure,
-    parse_integer_i64,
-    Response
+    parse_integer_i64
 };
 use tokio::io::{
     AsyncBufReadExt,
@@ -97,7 +97,7 @@ async fn handle_response(res: Result<Response, TransientError>) -> Result<(), Tr
                         Ok(ss) => println!("{}", ss),
                         Err(e) => {
                             println!("{:?}", e) // IDK WHAT THE FUCK I SHOULD DO
-                                                // LMAO
+                            // LMAO
                         }
                     }
                 },
