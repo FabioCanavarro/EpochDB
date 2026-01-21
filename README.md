@@ -19,7 +19,7 @@
 
 It provides a high-level, ergonomic API to solve common problems like caching, session management, and real-time analytics by treating data's **access frequency** and **age** as first-class citizens.
 
-## 🤔 Why EpochDB?
+## Why EpochDB?
 
 Many applications need to handle data that isn't meant to live forever. Think of user sessions, cached API responses, or event streams. Managing this "transient" data can be complex. You need to worry about:
 
@@ -29,7 +29,7 @@ Many applications need to handle data that isn't meant to live forever. Think of
 
 `EpochDB` solves these problems out-of-the-box with a clean, simple API.
 
-## ✨ Core Features
+## Core Features
 
 * **Intelligent Data Lifecycle:** Automatically prunes old, unused data based on a configurable grace period and frequency threshold.
 * **Performance-First Architecture:** Uses a multi-tree system to separate "hot," frequently-updated metadata from "cold," larger data blobs. This maximizes `sled`'s page cache efficiency.
@@ -37,7 +37,7 @@ Many applications need to handle data that isn't meant to live forever. Think of
 * **Durable & Crash-Safe:** Inherits the industrial-strength durability and crash-safety guarantees of `sled`'s Write-Ahead Log.
 * **Ergonomic API:** Provides a simple, high-level API that abstracts away the complexity of the underlying storage engine.
 
-## 🚀 Quick Start
+## Quick Start
 
 Get started with `EpochDB` by adding it to your `Cargo.toml`:
 
@@ -76,7 +76,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-## 🗺️ Roadmap
+## Roadmap
 
 `EpochDB` is actively being developed. Our goal is to create the best tool for managing ephemeral and usage-tracked data in the Rust ecosystem.
 
@@ -99,7 +99,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
       * [ ] A simple CLI tool for database inspection and management.
       * [ ] A TUI or web-based dashboard for viewing stats.
 
-## ❤️ Contributing
+## Contributing
 
 Contributions are welcome and greatly appreciated\! This project is a fantastic opportunity to dive into systems programming, database internals, and high-performance Rust.
 
@@ -112,5 +112,5 @@ If you're interested in helping, please:
 
 We are building a welcoming and collaborative community. Let's build something great together!
 
-## 📜 License
+## License
 This project is licensed under the [MIT license](http://opensource.org/licenses/MIT)
