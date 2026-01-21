@@ -80,7 +80,7 @@ pub async fn parse_server_response<T: AsyncReadExt + Unpin + AsyncBufReadExt + S
 
     match first {
         b'+' => {
-            let res = stream.read_until(b'\n', buf).await.map_err(|e| {
+            let _res = stream.read_until(b'\n', buf).await.map_err(|e| {
                 TransientError::IOError {
                     error: e
                 }
@@ -93,7 +93,7 @@ pub async fn parse_server_response<T: AsyncReadExt + Unpin + AsyncBufReadExt + S
             ))
         },
         b'-' => {
-            let res = stream.read_until(b'\n', buf).await.map_err(|e| {
+            let _res = stream.read_until(b'\n', buf).await.map_err(|e| {
                 TransientError::IOError {
                     error: e
                 }
@@ -124,7 +124,7 @@ pub async fn parse_server_response<T: AsyncReadExt + Unpin + AsyncBufReadExt + S
 
             let l = parse_integer_i64(stream).await?;
 
-            for i in 0..l {
+            for _ in 0..l {
                 let val = parse_server_response(stream, buf);
                 res_v.push(val.await?)
             }
