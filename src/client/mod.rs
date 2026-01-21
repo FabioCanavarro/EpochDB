@@ -5,18 +5,23 @@ use std::str::from_utf8;
 
 use async_recursion::async_recursion;
 use colored::Colorize;
-use crate::client::cli::{Commands, Client, Cli};
-use crate::db::errors::TransientError;
-use crate::protocol::{
-    Response,
-    parse_bulk_string_pure,
-    parse_integer_i64
-};
 use tokio::io::{
     AsyncBufReadExt,
     AsyncReadExt,
     AsyncWriteExt,
     BufStream
+};
+
+use crate::client::cli::{
+    Cli,
+    Client,
+    Commands
+};
+use crate::db::errors::TransientError;
+use crate::protocol::{
+    parse_bulk_string_pure,
+    parse_integer_i64,
+    Response
 };
 
 pub mod cli;
@@ -47,7 +52,7 @@ pub async fn handle_response(res: Result<Response, TransientError>) -> Result<()
                         Ok(ss) => println!("{}", ss),
                         Err(e) => {
                             println!("{:?}", e) // IDK WHAT THE FUCK I SHOULD DO
-                            // LMAO
+                                                // LMAO
                         }
                     }
                 },

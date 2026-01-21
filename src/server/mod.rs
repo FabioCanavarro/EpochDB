@@ -22,7 +22,6 @@ use tracing::{
     warn
 };
 
-use crate::DB;
 use crate::db::errors::TransientError;
 use crate::metadata::RespValue;
 use crate::protocol::{
@@ -34,6 +33,7 @@ use crate::server::commands::{
     ParsedResponse
 };
 use crate::server::utils::check_argument;
+use crate::DB;
 
 pub static CLIENT_COMMAND_SIZE: u64 = 4096;
 

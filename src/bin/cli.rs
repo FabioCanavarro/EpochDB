@@ -1,5 +1,13 @@
 use clap::Parser;
-use epoch_db::{client::{cli::{Cli, Client}, handle_response, tcp_logic}, db::errors::TransientError};
+use epoch_db::client::cli::{
+    Cli,
+    Client
+};
+use epoch_db::client::{
+    handle_response,
+    tcp_logic
+};
+use epoch_db::db::errors::TransientError;
 use tokio::net::TcpStream;
 
 #[tokio::main]

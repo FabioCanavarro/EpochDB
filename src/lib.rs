@@ -12,8 +12,8 @@
 //! frequency** and **age** as first-class citizens.
 
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
 use std::thread::JoinHandle;
 
 use db::errors::TransientError;
@@ -23,12 +23,12 @@ use serde::{
 };
 use sled::Tree;
 
+pub mod client;
 pub mod db;
 pub mod metadata;
 pub mod metrics;
 pub mod protocol;
 pub mod server;
-pub mod client;
 
 /// This is the main struct which represents the database.
 ///

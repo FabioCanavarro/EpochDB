@@ -6,7 +6,6 @@ use clap::{
 };
 use tokio::net::TcpStream;
 
-
 // Cli Parser
 #[derive(Parser)]
 #[command(version, about)]
