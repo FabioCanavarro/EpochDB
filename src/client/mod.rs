@@ -19,9 +19,9 @@ use crate::client::cli::{
 };
 use crate::db::errors::TransientError;
 use crate::protocol::{
+    Response,
     parse_bulk_string_pure,
-    parse_integer_i64,
-    Response
+    parse_integer_i64
 };
 
 pub mod cli;
@@ -52,7 +52,7 @@ pub async fn handle_response(res: Result<Response, TransientError>) -> Result<()
                         Ok(ss) => println!("{}", ss),
                         Err(e) => {
                             println!("{:?}", e) // IDK WHAT THE FUCK I SHOULD DO
-                                                // LMAO
+                            // LMAO
                         }
                     }
                 },

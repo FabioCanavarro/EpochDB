@@ -7,9 +7,9 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use clap::Parser;
+use epoch_db::DB;
 use epoch_db::server::response_handler;
 use epoch_db::server::utils::init_logger;
-use epoch_db::DB;
 use tokio::net::TcpListener;
 use tokio::runtime::Builder;
 use tokio::spawn;
