@@ -23,6 +23,7 @@ use serde::{
 };
 use sled::Tree;
 
+pub mod client;
 pub mod db;
 pub mod metadata;
 pub mod metrics;
