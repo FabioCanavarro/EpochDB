@@ -12,8 +12,8 @@
 //! frequency** and **age** as first-class citizens.
 
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
 use std::thread::JoinHandle;
 
 use db::errors::TransientError;

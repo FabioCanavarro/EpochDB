@@ -1,6 +1,6 @@
 use tracing_subscriber::{
-    EnvFilter,
-    fmt
+    fmt,
+    EnvFilter
 };
 
 use crate::db::errors::TransientError;

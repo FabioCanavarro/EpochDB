@@ -1,6 +1,5 @@
 use tokio::sync::mpsc;
 
-
 #[tokio::main]
 async fn main() {
     let (sx, rx) = mpsc::channel(100);
