@@ -6,6 +6,7 @@ use std::str::from_utf8;
 use std::sync::Arc;
 use std::time::Duration;
 
+use metrics_exporter_prometheus::PrometheusHandle;
 use tokio::io::{
     AsyncRead,
     AsyncReadExt,
@@ -37,7 +38,7 @@ use crate::server::utils::check_argument;
 
 pub static CLIENT_COMMAND_SIZE: u64 = 4096;
 
-pub async fn response_handler(mut stream: TcpStream, store: Arc<DB>) -> Result<(), TransientError> {
+pub async fn response_handler(mut stream: TcpStream, store: Arc<DB>, prometheus_handle: Arc<PrometheusHandle>) -> Result<(), TransientError> {
     let (reader, writer) = stream.split();
     let mut bufreader = BufReader::new(reader);
     let mut bufwriter = BufWriter::new(writer);
@@ -49,7 +50,7 @@ pub async fn response_handler(mut stream: TcpStream, store: Arc<DB>) -> Result<(
         match cmd_err {
             Ok(cmd) => {
                 info!("{:?} Command is received", cmd.command);
-                match execute_commands(cmd, &store, &mut bufwriter).await {
+                match execute_commands(cmd, &store, &mut bufwriter, &prometheus_handle).await {
                     Ok(_) => {
                         info!("Command is executed successfully!")
                     },
@@ -216,7 +217,8 @@ pub async fn parse_command<T: AsyncReadExt + AsyncRead + Unpin>(
 pub async fn execute_commands<T: AsyncWrite + AsyncWriteExt + Unpin>(
     parsed_reponse: ParsedResponse,
     store: &Arc<DB>,
-    stream: &mut BufWriter<T>
+    stream: &mut BufWriter<T>,
+    prometheus_handle: &Arc<PrometheusHandle>
 ) -> Result<(), TransientError> {
     let cmd = parsed_reponse.command;
     let key = parsed_reponse.key;
@@ -497,7 +499,10 @@ pub async fn execute_commands<T: AsyncWrite + AsyncWriteExt + Unpin>(
                     }
                 })?
         },
-        Command::Info => todo!(),
+        Command::Info => {
+            println!("{:?}", 1);
+            todo!()
+        },
         Command::Scan => todo!(),
     }
 

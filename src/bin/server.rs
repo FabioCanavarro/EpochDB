@@ -65,7 +65,7 @@ async fn async_main(args: (Cli)) -> Result<(), Box<dyn Error>> {
 
     let builder = PrometheusBuilder::new();
 
-    let prometheus_handle = builder.install_recorder().expect("Failed to install Prometheus");
+    let prometheus_handle = Arc::new(builder.install_recorder().expect("Failed to install Prometheus"));
 
     let addr = cli.addr;
     let listener = TcpListener::bind(&addr).await?;
@@ -79,7 +79,7 @@ async fn async_main(args: (Cli)) -> Result<(), Box<dyn Error>> {
         match stream_set {
             Ok(t) => {
                 counter = 0;
-                let _handler = spawn(response_handler(t.0, store.clone()));
+                let _handler = spawn(response_handler(t.0, store.clone(), prometheus_handle.clone()));
             },
             Err(e) => {
                 match e.kind() {
