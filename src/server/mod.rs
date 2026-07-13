@@ -497,6 +497,8 @@ pub async fn execute_commands<T: AsyncWrite + AsyncWriteExt + Unpin>(
                     }
                 })?
         },
+        Command::Info => todo!(),
+        Command::Scan => todo!(),
     }
 
     Ok(())

@@ -4,25 +4,6 @@ use epoch_db::db::errors::TransientError;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, BufReader};
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let mut stream = BufReader::new(&b"*2\r\n$3\r\nGET\r\n$3\r\nkey\r\n"[..]);

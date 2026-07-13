@@ -21,6 +21,8 @@ pub enum Command {
     Ping,
     Size,
     Flush,
+    Info,
+    Scan,
     Invalid
 }
 
@@ -51,7 +53,9 @@ impl From<Command> for String {
             Command::Flush => "flush".to_string(),
             Command::GetMetadata => "get_metadata".to_string(),
             Command::IncrementFrequency => "increment_frequency".to_string(),
-            Command::Invalid => "Invalid".to_string()
+            Command::Invalid => "Invalid".to_string(),
+            Command::Info => "info".to_string(),
+            Command::Scan => "scan".to_string(),
         }
     }
 }
@@ -67,6 +71,8 @@ impl From<Command> for &[u8] {
             Command::Flush => b"flush",
             Command::GetMetadata => b"get_metadata",
             Command::IncrementFrequency => b"increment_frequency",
+            Command::Info => b"info",
+            Command::Scan => b"scan",
             Command::Invalid => b"Invalid"
         }
     }
@@ -90,6 +96,10 @@ impl From<&[u8]> for Command {
             Command::GetMetadata
         } else if value.eq_ignore_ascii_case(b"increment_frequency") {
             Command::IncrementFrequency
+        } else if value.eq_ignore_ascii_case(b"info") {
+            Command::Info
+        } else if value.eq_ignore_ascii_case(b"scan") {
+            Command::Scan
         } else {
             // If the command is not recognized
             Command::Invalid
