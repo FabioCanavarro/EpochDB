@@ -56,7 +56,7 @@ impl From<Command> for String {
             Command::IncrementFrequency => "increment_frequency".to_string(),
             Command::Invalid => "Invalid".to_string(),
             Command::Info => "info".to_string(),
-            Command::Scan => "scan".to_string(),
+            Command::Scan => "scan".to_string()
         }
     }
 }

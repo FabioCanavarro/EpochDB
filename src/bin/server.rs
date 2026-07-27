@@ -10,7 +10,7 @@ use clap::Parser;
 use epoch_db::DB;
 use epoch_db::server::response_handler;
 use epoch_db::server::utils::init_logger;
-use metrics_exporter_prometheus::{PrometheusBuilder};
+use metrics_exporter_prometheus::PrometheusBuilder;
 use tokio::net::TcpListener;
 use tokio::runtime::Builder;
 use tokio::spawn;
@@ -65,7 +65,11 @@ async fn async_main(args: (Cli)) -> Result<(), Box<dyn Error>> {
 
     let builder = PrometheusBuilder::new();
 
-    let prometheus_handle = Arc::new(builder.install_recorder().expect("Failed to install Prometheus"));
+    let prometheus_handle = Arc::new(
+        builder
+            .install_recorder()
+            .expect("Failed to install Prometheus")
+    );
 
     let addr = cli.addr;
     let listener = TcpListener::bind(&addr).await?;
@@ -79,7 +83,11 @@ async fn async_main(args: (Cli)) -> Result<(), Box<dyn Error>> {
         match stream_set {
             Ok(t) => {
                 counter = 0;
-                let _handler = spawn(response_handler(t.0, store.clone(), prometheus_handle.clone()));
+                let _handler = spawn(response_handler(
+                    t.0,
+                    store.clone(),
+                    prometheus_handle.clone()
+                ));
             },
             Err(e) => {
                 match e.kind() {

@@ -38,7 +38,11 @@ use crate::server::utils::check_argument;
 
 pub static CLIENT_COMMAND_SIZE: u64 = 4096;
 
-pub async fn response_handler(mut stream: TcpStream, store: Arc<DB>, prometheus_handle: Arc<PrometheusHandle>) -> Result<(), TransientError> {
+pub async fn response_handler(
+    mut stream: TcpStream,
+    store: Arc<DB>,
+    prometheus_handle: Arc<PrometheusHandle>
+) -> Result<(), TransientError> {
     let (reader, writer) = stream.split();
     let mut bufreader = BufReader::new(reader);
     let mut bufwriter = BufWriter::new(writer);
@@ -504,7 +508,7 @@ pub async fn execute_commands<T: AsyncWrite + AsyncWriteExt + Unpin>(
             println!("{:?}", prometheus_handle.render());
             todo!()
         },
-        Command::Scan => todo!(),
+        Command::Scan => todo!()
     }
 
     Ok(())
