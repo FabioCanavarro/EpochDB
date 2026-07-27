@@ -379,6 +379,17 @@ pub async fn tcp_logic(cli: Cli, mut client: Client) -> Result<Response, Transie
                     error: e
                 }
             })?;
+        },
+        Commands::Info => {
+            // Clear the buffer, to use the buffer
+            client.buf.clear();
+
+            // Write the initial header, the number of elements and the command
+            write!(client.buf, "*1\r\n$4\r\nINFO\r\n").map_err(|e| {
+                TransientError::IOError {
+                    error: e
+                }
+            })?;
         }
     }
 

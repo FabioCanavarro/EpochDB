@@ -10,7 +10,7 @@ use clap::Parser;
 use epoch_db::DB;
 use epoch_db::server::response_handler;
 use epoch_db::server::utils::init_logger;
-use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle};
+use metrics_exporter_prometheus::{PrometheusBuilder};
 use tokio::net::TcpListener;
 use tokio::runtime::Builder;
 use tokio::spawn;

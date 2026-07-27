@@ -45,7 +45,10 @@ pub enum Commands {
     Size,
 
     /// Flush the database
-    Flush
+    Flush,
+
+    /// Get the Prometheus Metrics
+    Info
 }
 
 #[derive(Debug)]

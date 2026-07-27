@@ -111,7 +111,7 @@ pub async fn response_handler(mut stream: TcpStream, store: Arc<DB>, prometheus_
                         })?;
                     },
                     TransientError::ClientDisconnected => {
-                        info!("Client has disconnected clearly!");
+                        debug!("Client has disconnected clearly!");
                         break;
                     },
                     TransientError::AboveSizeLimit => {
@@ -138,7 +138,8 @@ pub async fn response_handler(mut stream: TcpStream, store: Arc<DB>, prometheus_
                 error: e
             }
         })?;
-        info!("Stream is flushed!!");
+
+        debug!("Stream is flushed!!");
     }
 
     Ok(())
@@ -500,7 +501,7 @@ pub async fn execute_commands<T: AsyncWrite + AsyncWriteExt + Unpin>(
                 })?
         },
         Command::Info => {
-            println!("{:?}", 1);
+            println!("{:?}", prometheus_handle.render());
             todo!()
         },
         Command::Scan => todo!(),

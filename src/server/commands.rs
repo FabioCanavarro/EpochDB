@@ -37,6 +37,7 @@ impl From<String> for Command {
             "ping" => Self::Ping,
             "size" => Self::Size,
             "flush" => Self::Flush,
+            "info" => Self::Info,
             _ => Self::Invalid
         }
     }
