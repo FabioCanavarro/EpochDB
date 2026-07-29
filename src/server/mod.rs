@@ -259,7 +259,9 @@ pub async fn execute_commands<T: AsyncWrite + AsyncWriteExt + Unpin>(
         },
         Command::GetMetadata => {
             check_argument(cmd.into(), 2, parsed_reponse.len, None).await?;
-            match store.get_metadata_raw(&&key.ok_or(TransientError::InvalidCommand)?[..]) {
+            let raw_metadata = store.get_metadata_raw(&&key.ok_or(TransientError::InvalidCommand)?[..]);
+            debug!("{:#?}", raw_metadata);
+            match raw_metadata {
                 Ok(v) => {
                     match v {
                         Some(val) => {
@@ -505,8 +507,25 @@ pub async fn execute_commands<T: AsyncWrite + AsyncWriteExt + Unpin>(
                 })?
         },
         Command::Info => {
-            println!("{:?}", prometheus_handle.render());
-            todo!()
+            check_argument(cmd.into(), 1, parsed_reponse.len, None).await?;
+            println!("{:#?}", prometheus_handle.render());
+
+            // TODO: THIS SHOULD BE CHANGE
+            
+            /* NOTE: New plan for metrics
+             *  after thorough testing, I have just discovered that the metrics lib/ prometheus
+             *  itself is temporary(?)
+             *  
+             *  So the plan here is to let prometheus handle real time metrics, then after every
+             *  shutdown, the DB will store all the metrics in a seperate tree name "__epochdb_sys_metrics__"
+             *
+             *  Then on every startup, the DB will get all of these metrics from __epochdb_sys_metrics__ and write it to prometheus
+             *
+             *  and the cycle begins
+             *  
+             */
+
+
         },
         Command::Scan => todo!()
     }

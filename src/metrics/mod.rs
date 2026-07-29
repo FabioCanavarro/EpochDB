@@ -11,6 +11,7 @@ use metrics::{
 #[derive(Debug)]
 pub struct Metrics {}
 
+// Currently there are 6 metrics
 impl Metrics {
     /// Sets the current number of keys for a given tree.
     pub fn set_keys_total(tree: &str, value: u64) {
@@ -27,9 +28,24 @@ impl Metrics {
         gauge!("epochdb_keys_total", "tree" => tree.to_string()).decrement(1);
     }
 
+    /// Sets the current number of keys for a given tree.
+    pub fn inc_amount_keys_total(tree: &str, value: u64) {
+        gauge!("epochdb_keys_total", "tree" => tree.to_string()).set(value as f64);
+    }
+
+    /// Sets the current number of keys for a given tree.
+    pub fn dec_amount_keys_total(tree: &str, amount: u64) {
+        gauge!("epochdb_keys_total", "tree" => tree.to_string()).decrement(amount as f64);
+    }
+
     /// Increments the counter for a specific database operation.
     pub fn increment_operations(op: &str) {
         counter!("epochdb_operations_total", "operation" => op.to_string()).increment(1);
+    }
+
+    /// Increments the counter for a specific database operation.
+    pub fn increment_amount_operations(op: &str, amount: u64) {
+        counter!("epochdb_operations_total", "operation" => op.to_string()).increment(amount);
     }
 
     /// Sets the current total disk size of the database.
@@ -47,18 +63,8 @@ impl Metrics {
         counter!("epochdb_ttl_expired_keys_total").increment(1);
     }
 
-    /// Sets the current number of keys for a given tree.
-    pub fn inc_amount_keys_total(tree: &str, value: u64) {
-        gauge!("epochdb_keys_total", "tree" => tree.to_string()).set(value as f64);
-    }
-
-    /// Sets the current number of keys for a given tree.
-    pub fn dec_amount_keys_total(tree: &str, amount: u64) {
-        gauge!("epochdb_keys_total", "tree" => tree.to_string()).decrement(amount as f64);
-    }
-
-    /// Increments the counter for a specific database operation.
-    pub fn increment_amount_operations(op: &str, amount: u64) {
-        counter!("epochdb_operations_total", "operation" => op.to_string()).increment(amount);
+    /// Increments the counter for expired TTL keys.
+    pub fn increment_amount_ttl_expired_keys(value: u64) {
+        counter!("epochdb_ttl_expired_keys_total").increment(value);
     }
 }
