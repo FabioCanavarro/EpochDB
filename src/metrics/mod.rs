@@ -111,7 +111,7 @@ pub struct MetricDatapoints {
  *  metric manual parsing easier
  *
  * NOTE: An example .render().lines() will include:
- 
+
 "# TYPE epochdb_ttl_expired_keys_total counter"
 "epochdb_ttl_expired_keys_total 1"
 ""
@@ -128,44 +128,3 @@ pub struct MetricDatapoints {
 "epochdb_disk_size_bytes 0.00390625"
 ""
 */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -509,7 +509,10 @@ pub async fn execute_commands<T: AsyncWrite + AsyncWriteExt + Unpin>(
         },
         Command::Info => {
             check_argument(cmd.into(), 1, parsed_reponse.len, None).await?;
-            prometheus_handle.render().lines().for_each(|d| println!("{:#?}", d));
+            prometheus_handle
+                .render()
+                .lines()
+                .for_each(|d| println!("{:#?}", d));
 
             // TODO: THIS SHOULD BE CHANGE
 
