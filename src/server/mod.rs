@@ -49,7 +49,7 @@ pub async fn response_handler(
 
     loop {
         let cmd_err = parse_command(&mut bufreader).await;
-        debug!("Received: {:#?}", cmd_err);
+        info!("Received: {:#?}", cmd_err);
 
         match cmd_err {
             Ok(cmd) => {
@@ -115,7 +115,7 @@ pub async fn response_handler(
                         })?;
                     },
                     TransientError::ClientDisconnected => {
-                        debug!("Client has disconnected clearly!");
+                        info!("Client has disconnected clearly!");
                         break;
                     },
                     TransientError::AboveSizeLimit => {
@@ -143,7 +143,7 @@ pub async fn response_handler(
             }
         })?;
 
-        debug!("Stream is flushed!!");
+        info!("Stream is flushed!!");
     }
 
     Ok(())
@@ -509,7 +509,7 @@ pub async fn execute_commands<T: AsyncWrite + AsyncWriteExt + Unpin>(
         },
         Command::Info => {
             check_argument(cmd.into(), 1, parsed_reponse.len, None).await?;
-            println!("{:#?}", prometheus_handle.render());
+            prometheus_handle.render().lines().for_each(|d| println!("{:#?}", d));
 
             // TODO: THIS SHOULD BE CHANGE
 

@@ -1,6 +1,8 @@
 // TODO: Refactor the whole file to use Prometheus crate instead for testing
 // purposes
 
+use std::collections::HashMap;
+
 use metrics::{
     counter,
     gauge
@@ -68,3 +70,102 @@ impl Metrics {
         counter!("epochdb_ttl_expired_keys_total").increment(value);
     }
 }
+
+#[derive(Debug)]
+pub struct MetricFamily {
+    name: String,
+    types: MetricType,
+    datapoints: Vec<MetricDatapoints>
+}
+
+#[derive(Debug)]
+pub enum MetricType {
+    Counter,
+    Gauge,
+    Histogram,
+    Summary
+}
+
+#[derive(Debug)]
+pub struct MetricDatapoints {
+    labels: HashMap<String, String>,
+    value: f64
+}
+
+/* NOTE: So the complete one will look like
+ * Vec<
+ *  MetricFamily{
+ *      String,
+ *      MetricType
+ *      Vec<
+ *          HashMap<
+ *              String,
+ *              String
+ *          >,
+ *          f64
+ *      >
+ *  }
+ * >
+ *
+ * NOTE: I build this visualiztion of the type just so i can develope the proper procedure of the
+ *  metric manual parsing easier
+ *
+ * NOTE: An example .render().lines() will include:
+ 
+"# TYPE epochdb_ttl_expired_keys_total counter"
+"epochdb_ttl_expired_keys_total 1"
+""
+"# TYPE epochdb_operations_total counter"
+"epochdb_operations_total{operation=\"set\"} 2"
+"epochdb_operations_total{operation=\"get\"} 1"
+""
+"# TYPE epochdb_keys_total gauge"
+"epochdb_keys_total{tree=\"meta\"} 1"
+"epochdb_keys_total{tree=\"ttl\"} 0"
+"epochdb_keys_total{tree=\"data\"} 1"
+""
+"# TYPE epochdb_disk_size_bytes gauge"
+"epochdb_disk_size_bytes 0.00390625"
+""
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
